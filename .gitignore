@@ -1,0 +1,46 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node / Expo
+node_modules/
+.expo/
+.expo-shared/
+.npm/
+.yarn/
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Local databases / runtime data
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs
+*.log
+
+# OSINT/local data that should not be committed accidentally
+data/local/
+data/raw/
