@@ -1,7 +1,8 @@
-"""Import Natural Earth Admin 0 Countries into STATION V.
+"""Load Natural Earth Admin 0 country geometries into STATION V.
 
-The raw Natural Earth ZIP is intentionally kept outside Git. This script reads
-it locally and loads the selected fields and geometries into PostgreSQL/PostGIS.
+The country catalogue is authoritative in the database. Natural Earth is used
+only as a cartographic geometry source. Therefore this script updates existing
+country rows and never creates new countries from Natural Earth records.
 
 Expected input:
     data/raw/natural-earth/ne_10m_admin_0_countries.zip
@@ -25,6 +26,18 @@ from shapely.validation import make_valid
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ZIP = ROOT / "data" / "raw" / "natural-earth" / "ne_10m_admin_0_countries.zip"
+DEFAULT_DATABASE_URL = "postgresql://station_v:station_v_dev@localhost:5432/station_v"
+
+# Natural Earth uses -99 for France and Norway in this dataset and also has
+# special/non-standard records. These aliases are deliberately explicit so
+# cartographic names can be mapped to the STATION V country catalogue.
+NAME_ALIASES = {
+    "France": "FRA",
+    "Norway": "NOR",
+    "Palestine": "PSE",
+    "Kosovo": "XKX",
+    "Taiwan": "TWN",
+}
 
 
 def normalize_geometry(geometry):
@@ -53,10 +66,7 @@ def main() -> int:
         print(f"ERROR: Natural Earth ZIP not found: {zip_path}")
         return 1
 
-    database_url = os.getenv(
-        "DATABASE_URL",
-        "postgresql://station_v:station_v@localhost:5432/station_v",
-    )
+    database_url = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
     print(f"Reading: {zip_path}")
     gdf = gpd.read_file(f"zip://{zip_path}")
@@ -73,50 +83,77 @@ def main() -> int:
 
     gdf = gdf.to_crs("EPSG:4326")
 
-    rows = []
-    skipped = []
-
-    for _, row in gdf.iterrows():
-        iso2 = str(row["ISO_A2"]).strip().upper()
-        iso3 = str(row["ISO_A3"]).strip().upper()
-        name = str(row["NAME"]).strip()
-
-        # Natural Earth uses -99 for some non-standard ISO fields. Those
-        # records are not suitable for the countries table's ISO constraints.
-        if len(iso2) != 2 or iso2 == "-9" or len(iso3) != 3 or iso3 == "-99":
-            skipped.append(name)
-            continue
-
-        geometry = normalize_geometry(row.geometry)
-        if geometry is None:
-            skipped.append(name)
-            continue
-
-        rows.append((iso2, iso3, name, geometry.wkb_hex))
-
-    print(f"Prepared {len(rows)} countries; skipped {len(skipped)} records.")
-    if skipped:
-        print("Skipped records:", ", ".join(skipped))
-
     with psycopg.connect(database_url) as conn:
         with conn.cursor() as cur:
-            for iso2, iso3, name, geometry_wkb in rows:
+            cur.execute("SELECT id, iso2, iso3, name FROM countries")
+            catalogue = cur.fetchall()
+
+            by_iso2 = {row[1]: row[0] for row in catalogue}
+            by_iso3 = {row[2]: row[0] for row in catalogue}
+            by_name = {row[3].casefold(): row[0] for row in catalogue}
+
+            updated = set()
+            unmatched = []
+            invalid = []
+
+            for _, row in gdf.iterrows():
+                iso2 = str(row["ISO_A2"]).strip().upper()
+                iso3 = str(row["ISO_A3"]).strip().upper()
+                name = str(row["NAME"]).strip()
+
+                country_id = None
+                if len(iso2) == 2 and iso2 in by_iso2:
+                    country_id = by_iso2[iso2]
+                elif len(iso3) == 3 and iso3 in by_iso3:
+                    country_id = by_iso3[iso3]
+                elif name in NAME_ALIASES and NAME_ALIASES[name] in by_iso3:
+                    country_id = by_iso3[NAME_ALIASES[name]]
+                elif name.casefold() in by_name:
+                    country_id = by_name[name.casefold()]
+
+                if country_id is None:
+                    continue
+
+                geometry = normalize_geometry(row.geometry)
+                if geometry is None:
+                    invalid.append(name)
+                    continue
+
                 cur.execute(
                     """
-                    INSERT INTO countries (iso2, iso3, name, geometry)
-                    VALUES (%s, %s, %s, ST_GeomFromWKB(%s, 4326))
-                    ON CONFLICT (iso2) DO UPDATE SET
-                        iso3 = EXCLUDED.iso3,
-                        name = EXCLUDED.name,
-                        geometry = EXCLUDED.geometry,
+                    UPDATE countries
+                    SET geometry = ST_GeomFromWKB(%s, 4326),
                         updated_at = now()
+                    WHERE id = %s
                     """,
-                    (iso2, iso3, name, bytes.fromhex(geometry_wkb)),
+                    (bytes.fromhex(geometry.wkb_hex), country_id),
                 )
+                updated.add(country_id)
+
+            cur.execute(
+                """
+                SELECT iso3, name
+                FROM countries
+                WHERE geometry IS NULL
+                ORDER BY iso3
+                """
+            )
+            unmatched = cur.fetchall()
 
         conn.commit()
 
-    print(f"Imported/updated {len(rows)} countries successfully.")
+    print(f"Updated geometries for {len(updated)} / {len(catalogue)} catalogue countries.")
+
+    if invalid:
+        print("Invalid/empty geometries:", ", ".join(invalid))
+
+    if unmatched:
+        print("Countries without geometry:")
+        for iso3, name in unmatched:
+            print(f"  {iso3} - {name}")
+        return 1
+
+    print("All STATION V catalogue countries have a geometry.")
     return 0
 
 
