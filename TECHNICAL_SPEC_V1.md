@@ -134,7 +134,7 @@ El frontend mostrará resultados calculados por el backend. Las fórmulas y regl
        Aplicación móvil                  API REST
               │                             │
        Interactive Map                 Domain Logic
-       Situation                       Risk Engine
+       Situation Dashboard             Risk Engine
        Search                          Event Logic
        Country Panel                   Evidence Logic
        Event Panel                         │
@@ -164,6 +164,8 @@ DIMENSION
    ↓
 COUNTRY RISK
 ```
+
+Las áreas principales de la aplicación son vistas diferentes del mismo modelo de datos. Country Panel y Event Panel son componentes de detalle superpuestos y no constituyen áreas de navegación principales independientes.
 
 ## 5. Stack tecnológico
 
@@ -202,7 +204,7 @@ El stack podrá modificarse posteriormente si la experiencia durante el desarrol
 
 ## 6. Aplicación móvil
 
-La aplicación tendrá tres áreas principales:
+La aplicación tendrá tres áreas principales y tres pestañas de navegación en V1:
 
 ```text
 🌍 MAPA
@@ -210,7 +212,15 @@ La aplicación tendrá tres áreas principales:
 🔎 BUSCAR
 ```
 
+**MAPA** será la entrada principal de la V1.
+
+**SITUACIÓN** será un dashboard único de indicadores y cambios geopolíticos.
+
+**BUSCAR** permitirá localizar y explorar países y acontecimientos.
+
 No existirán pantallas independientes de países o acontecimientos en V1. Los detalles se mostrarán mediante paneles superpuestos.
+
+La navegación deberá permitir incorporar nuevas pestañas funcionales en futuras versiones sin modificar el núcleo conceptual de la aplicación.
 
 ## 7. Mapa
 
@@ -244,6 +254,15 @@ Los acontecimientos aparecerán como marcadores.
 
 El mapa mostrará inicialmente únicamente acontecimientos de severidad Alta o Crítica que hayan superado el umbral de corroboración operativo.
 
+El color de los marcadores se determinará por Escalation Score, no por severidad:
+
+```text
+0–3       baja       verde
+>3–6      moderada   amarillo
+>6–8      alta       naranja
+>8–10     crítica    rojo
+```
+
 ### 7.4 Categorías
 
 ```text
@@ -257,7 +276,7 @@ critical_infrastructure
 security_terrorism
 ```
 
-Cada categoría tendrá icono, representación cromática, nombre legible y clave interna.
+Cada categoría tendrá icono, nombre legible y clave interna.
 
 ### 7.5 Clustering
 
@@ -328,7 +347,7 @@ La complejidad interna del EVENT no se trasladará íntegramente a la interfaz m
 
 La pantalla Situación será un dashboard único.
 
-Contendrá cuatro paneles:
+Contendrá inicialmente cuatro paneles:
 
 ### 10.1 Mayor Country Risk
 
@@ -348,9 +367,13 @@ Eventos Alta/Crítica ordenados por Escalation Score descendente.
 
 No se incluirá todavía un ranking regional.
 
+Podrán incorporarse paneles adicionales en futuras iteraciones sin modificar la arquitectura conceptual del dashboard.
+
 ## 11. Búsqueda
 
-La búsqueda permitirá:
+La pestaña principal se denominará **BUSCAR**.
+
+La búsqueda permitirá inicialmente:
 
 ```text
 País
@@ -366,6 +389,8 @@ GET /api/v1/search?q={query}
 ```
 
 Los resultados estarán agrupados por tipo. La selección abrirá el correspondiente CountryPanel o EventPanel.
+
+La exploración y filtrado de acontecimientos se integrará en esta área y no constituirá una cuarta pestaña independiente en V1.
 
 ## 12. Modelo de datos
 
@@ -825,6 +850,8 @@ frontend/
 └── assets/
 ```
 
+`MapScreen`, `SituationScreen` y `SearchScreen` corresponden a las tres áreas principales de navegación. `CountryPanel` y `EventPanel` son componentes de detalle superpuestos y no pantallas principales.
+
 ## 26. Estructura del backend
 
 ```text
@@ -935,7 +962,7 @@ El MVP deberá contar con tests para:
 
 ### Frontend
 
-- navegación;
+- navegación entre las tres áreas principales;
 - selección de país;
 - selección de evento;
 - apertura/cierre de paneles;
