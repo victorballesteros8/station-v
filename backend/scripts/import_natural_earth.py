@@ -20,7 +20,8 @@ from pathlib import Path
 
 import geopandas as gpd
 import psycopg
-from shapely.geometry import MultiPolygon, Polygon
+from shapely.geometry import GeometryCollection, MultiPolygon, Polygon
+from shapely.validation import make_valid
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ZIP = ROOT / "data" / "raw" / "natural-earth" / "ne_10m_admin_0_countries.zip"
@@ -31,13 +32,13 @@ def normalize_geometry(geometry):
     if geometry is None or geometry.is_empty:
         return None
 
-    geometry = geometry.make_valid()
+    geometry = make_valid(geometry)
 
     if geometry.geom_type == "Polygon":
         return MultiPolygon([geometry])
     if geometry.geom_type == "MultiPolygon":
         return geometry
-    if geometry.geom_type == "GeometryCollection":
+    if isinstance(geometry, GeometryCollection):
         polygons = [g for g in geometry.geoms if isinstance(g, Polygon)]
         if polygons:
             return MultiPolygon(polygons)
