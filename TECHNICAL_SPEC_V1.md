@@ -452,9 +452,14 @@ created_at
 updated_at
 
 duplicate_of
+current_version_id
 ```
 
-El EVENT deberá ser versionable y los duplicados conservarán su relación mediante `duplicate_of`.
+El EVENT será versionable. Cada modificación estructural relevante del acontecimiento generará una nueva versión conservando el estado anterior.
+
+La versión vigente estará identificada mediante `current_version_id`. Las versiones históricas no se sobrescribirán.
+
+Los duplicados conservarán su relación mediante `duplicate_of` y no se eliminarán silenciosamente.
 
 ### 12.3 Event Timeline
 
@@ -469,23 +474,42 @@ description
 event_version_id
 created_at
 ```
-
 `event_timeline` registrará la evolución temporal de un EVENT.
 
-Podrá utilizarse para registrar:
+Tipos iniciales de actualización:
 
-- creación o detección inicial;
-- nuevas evidencias;
-- cambios de estado;
-- cambios de severidad;
-- cambios de Escalation Score;
-- cambios relevantes de localización o información factual;
-- otras actualizaciones relevantes del acontecimiento.
+```
+initial_detection
+general_update
+status_change
+occurrence
+```
 
-El timeline no sustituirá al versionado de `event_versions`. Ambos mecanismos tendrán funciones diferentes:
+`initial_detection`
 
-- `event_versions` conservará el estado estructurado del EVENT en cada versión;
-- `event_timeline` conservará la secuencia temporal de actualizaciones relevantes.
+
+Registra la detección o creación inicial del EVENT.
+
+`general_update`
+
+Registra una actualización relevante que no implique necesariamente un cambio de estado o una nueva ocurrencia independiente.
+
+`status_change`
+
+Registra cambios relevantes en el estado operativo del EVENT.
+
+`occurrence`
+
+Registra una nueva ocurrencia relacionada con el mismo acontecimiento o incidente.
+
+Una `occurrence` no crea automáticamente un EVENT nuevo. Se mantiene dentro del EVENT existente siempre que exista continuidad suficiente para considerar que forma parte del mismo acontecimiento.
+
+Cuando una actualización modifique información estructural del EVENT, deberá generarse una nueva versión. La actualización del timeline conservará la referencia a `event_version_id` cuando corresponda.
+
+El timeline y el versionado tienen funciones diferentes:
+
+`event_versions` conserva el estado estructurado del EVENT en cada versión;
+`event_timeline` conserva la secuencia temporal de actualizaciones relevantes.
 
 La información del timeline deberá mantener trazabilidad hacia el EVENT y, cuando corresponda, hacia la versión del evento que originó la actualización.
 
@@ -1117,7 +1141,9 @@ Actualmente están implementados:
 
 El dataset de desarrollo continúa siendo sintético y reducido.
 
-La tabla `event_timeline` existe en el modelo de datos, pero su utilización funcional completa queda pendiente de implementación.
+La tabla `event_timeline` está implementada y se utiliza funcionalmente para registrar la evolución temporal de los acontecimientos.
+
+El sistema mantiene separación entre timeline y versionado: el timeline registra la secuencia temporal de actualizaciones y `event_versions` conserva los estados estructurados del EVENT.
 
 La ingestión OSINT real todavía no forma parte del sistema operativo del MVP.
 
