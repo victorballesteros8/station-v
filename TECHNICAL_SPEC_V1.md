@@ -13,7 +13,7 @@
 
 Esta especificación define la arquitectura técnica mínima necesaria para implementar la V1 funcional de STATION V.
 
-La V1 será una aplicación móvil de *situational awareness* geopolítico basada en información OSINT estructurada.
+La V1 será una aplicación web responsive de *situational awareness* geopolítico basada en información OSINT estructurada, optimizada prioritariamente para dispositivos móviles.
 
 Su objetivo es permitir al usuario:
 
@@ -30,7 +30,7 @@ STATION V no será un agregador masivo de noticias. La arquitectura debe transfo
 
 ### Incluido
 
-- Aplicación móvil.
+- Aplicación web responsive, optimizada para móvil.
 - Mapa mundial interactivo.
 - Zoom y desplazamiento libre del mapa.
 - Visualización geográfica de acontecimientos Alta/Crítica.
@@ -131,7 +131,7 @@ El frontend mostrará resultados calculados por el backend. Las fórmulas y regl
               │                             │
           FRONTEND                       BACKEND
               │                             │
-       Aplicación móvil                  API REST
+       Aplicación web                  API REST
               │                             │
        Interactive Map                 Domain Logic
        Situation Dashboard             Risk Engine
@@ -173,9 +173,13 @@ Estas son decisiones técnicas del proyecto, no elementos establecidos por los d
 
 ### Frontend
 
-- React Native
-- Expo
+- React
+- Vite
 - TypeScript
+
+El frontend V1 se implementará inicialmente como una aplicación web responsive, diseñada para su uso prioritario en dispositivos móviles.
+
+La arquitectura deberá permitir valorar posteriormente una evolución hacia una aplicación nativa si las necesidades del producto lo justifican.
 
 ### Backend
 
@@ -198,11 +202,13 @@ Estas son decisiones técnicas del proyecto, no elementos establecidos por los d
 ### Tests
 
 - pytest para backend
-- tests de TypeScript/React Native para frontend
+- tests de TypeScript/React para frontend
 
 El stack podrá modificarse posteriormente si la experiencia durante el desarrollo demuestra que existe una alternativa claramente superior, pero no se cambiará durante la construcción del MVP salvo necesidad justificada.
 
-## 6. Aplicación móvil
+## 6. Aplicación
+
+La V1 se implementará como una aplicación web responsive, optimizada prioritariamente para dispositivos móviles.
 
 La aplicación tendrá tres áreas principales y tres pestañas de navegación en V1:
 
@@ -220,7 +226,7 @@ La aplicación tendrá tres áreas principales y tres pestañas de navegación e
 
 No existirán pantallas independientes de países o acontecimientos en V1. Los detalles se mostrarán mediante paneles superpuestos.
 
-La navegación deberá permitir incorporar nuevas pestañas funcionales en futuras versiones sin modificar el núcleo conceptual de la aplicación.
+La navegación deberá permitir incorporar nuevas áreas funcionales en futuras versiones sin modificar el núcleo conceptual de la aplicación.
 
 ## 7. Mapa
 
@@ -449,6 +455,39 @@ duplicate_of
 ```
 
 El EVENT deberá ser versionable y los duplicados conservarán su relación mediante `duplicate_of`.
+
+### 12.3 Event Timeline
+
+```text
+EventTimeline
+---------
+id
+event_id
+timestamp
+update_type
+description
+event_version_id
+created_at
+```
+
+`event_timeline` registrará la evolución temporal de un EVENT.
+
+Podrá utilizarse para registrar:
+
+- creación o detección inicial;
+- nuevas evidencias;
+- cambios de estado;
+- cambios de severidad;
+- cambios de Escalation Score;
+- cambios relevantes de localización o información factual;
+- otras actualizaciones relevantes del acontecimiento.
+
+El timeline no sustituirá al versionado de `event_versions`. Ambos mecanismos tendrán funciones diferentes:
+
+- `event_versions` conservará el estado estructurado del EVENT en cada versión;
+- `event_timeline` conservará la secuencia temporal de actualizaciones relevantes.
+
+La información del timeline deberá mantener trazabilidad hacia el EVENT y, cuando corresponda, hacia la versión del evento que originó la actualización.
 
 ## 13. Países afectados
 
@@ -701,43 +740,88 @@ El motor implementará las reglas oficiales de V1.1.
 
 ### Ventana temporal
 
-7 días.
+La ventana de cálculo de impactos de eventos será de **7 días (168 horas)**.
+
+Los eventos con una antigüedad superior a 7 días tendrán un peso temporal de 0 para el cálculo del impacto efectivo.
 
 ### Decaimiento
 
-Semivida de 48 horas:
+Se utilizará una semivida de 48 horas:
 
 ```text
 W_t = 2^(-t/48)
 ```
 
+donde `t` representa la antigüedad del evento en horas.
+
+Valores de referencia:
+
+```text
+0 h       → 1.0000
+48 h      → 0.5000
+96 h      → 0.2500
+168 h     → 0.0884
+>168 h    → 0
+```
+
+Los eventos futuros respecto al momento de referencia tendrán peso temporal 1.0.
+
 ### Repetición
 
 ```text
-1.º  1.00
-2.º  0.60
-3.º  0.35
-4.º  0.20
-5.º+ 0.10
+1.º   1.00
+2.º   0.60
+3.º   0.35
+4.º   0.20
+5.º+  0.10
 ```
+
+### Impacto efectivo
+
+```text
+I_effective = I_base × R × W_t × W_r
+```
+
+Los valores de entrada se limitarán a sus rangos válidos antes de realizar el cálculo.
 
 ### Presión acumulada
 
+La presión de eventos se calculará mediante una función de saturación:
+
 ```text
-P = Σ I_effective
+P = 100 × (1 - exp(-Σ I_effective / K))
 ```
+
+con:
+
+```text
+K = 3.0
+```
+
+La presión resultante estará limitada al intervalo 0–100.
 
 ### Estado del subindicador
 
 ```text
-S_t = 0.65 × S_(t-1) + 0.35 × S_events
+S_t = 0.65 × S_(t-1) + 0.35 × P
 ```
+
+donde:
+
+- `S_(t-1)` es el estado anterior del subindicador;
+- `P` es la presión actual de eventos.
 
 ### Country Risk
 
 ```text
-CRS = 0.25 I + 0.25 C + 0.20 T + 0.15 M + 0.15 P
+CRS = 0.25 I
+    + 0.25 C
+    + 0.20 T
+    + 0.15 M
+    + 0.15 P
 ```
+
+Todos los scores se expresarán en el intervalo 0–100.
 
 ## 22. Trend
 
@@ -765,12 +849,27 @@ La confianza dependerá de factores relacionados con calidad de fuentes, indepen
 
 ## 24. API
 
-La API será REST y versionada.
+La API será REST.
 
-Prefijo:
+Los endpoints funcionales V1 se estructurarán bajo el prefijo:
 
 ```text
 /api/v1
+```
+
+Durante la fase actual de desarrollo existen algunos endpoints heredados bajo `/api`. Estos podrán mantenerse temporalmente por compatibilidad durante la construcción del MVP, pero los nuevos endpoints funcionales deberán utilizar `/api/v1`.
+
+### Países
+
+```http
+GET /api/v1/countries/{country_id}
+```
+
+### Eventos
+
+```http
+GET /api/v1/events
+GET /api/v1/events/{event_id}
 ```
 
 ### Mapa
@@ -789,16 +888,10 @@ max_lon
 zoom
 ```
 
-### País
+### Riesgo
 
 ```http
-GET /api/v1/countries/{country_id}
-```
-
-### Evento
-
-```http
-GET /api/v1/events/{event_id}
+POST /api/v1/risk/recalculate/{country_id}
 ```
 
 ### Situación
@@ -810,85 +903,109 @@ GET /api/v1/situation
 Respuesta lógica:
 
 ```text
-top_country_risk
-top_deterioration
-top_improvement
-top_events
+top_risk
+deterioration_24h
+improvement_24h
+relevant_events
 ```
 
 ### Búsqueda
 
 ```http
-GET /api/v1/search?q=
+GET /api/v1/search?q={query}
 ```
 
+Los resultados podrán incluir países y acontecimientos.
+
 ## 25. Estructura del frontend
+
+La implementación actual utiliza React, Vite y TypeScript.
+
+Estructura base:
 
 ```text
 frontend/
 │
-├── app/
+├── public/
 │
-├── screens/
-│   ├── MapScreen
-│   ├── SituationScreen
-│   └── SearchScreen
+├── src/
+│   ├── api/
+│   │   ├── country.ts
+│   │   ├── events.ts
+│   │   ├── search.ts
+│   │   └── situation.ts
+│   │
+│   ├── components/
+│   │   └── CountryIdentity.tsx
+│   │
+│   ├── App.tsx
+│   ├── MapView.tsx
+│   ├── Situation.tsx
+│   ├── Search.tsx
+│   ├── CountryPanel.tsx
+│   ├── EventDetailPanel.tsx
+│   │
+│   ├── App.css
+│   ├── MapView.css
+│   ├── Situation.css
+│   ├── Search.css
+│   └── index.css
 │
-├── panels/
-│   ├── CountryPanel
-│   └── EventPanel
-│
-├── map/
-│   ├── MapView
-│   ├── EventMarker
-│   └── EventCluster
-│
-├── components/
-├── services/
-│   └── api/
-├── types/
-└── assets/
+└── package.json
 ```
 
-`MapScreen`, `SituationScreen` y `SearchScreen` corresponden a las tres áreas principales de navegación. `CountryPanel` y `EventPanel` son componentes de detalle superpuestos y no pantallas principales.
+Las tres áreas principales de navegación son:
+
+```text
+MAPA
+SITUACIÓN
+BUSCAR
+```
+
+`CountryPanel` y `EventDetailPanel` son componentes de detalle superpuestos y no áreas principales de navegación.
 
 ## 26. Estructura del backend
+
+La implementación actual utiliza una estructura modular sencilla:
 
 ```text
 backend/
 │
 ├── app/
 │   ├── api/
-│   │   ├── map.py
 │   │   ├── countries.py
+│   │   ├── country.py
 │   │   ├── events.py
-│   │   ├── situation.py
-│   │   └── search.py
+│   │   ├── risk.py
+│   │   ├── search.py
+│   │   └── situation.py
 │   │
 │   ├── models/
 │   ├── schemas/
-│   ├── services/
-│   │   ├── events/
-│   │   ├── evidence/
-│   │   └── risk/
+│   │   └── events.py
 │   │
 │   ├── scoring/
-│   │   ├── impacts.py
-│   │   ├── temporal.py
-│   │   ├── repetition.py
-│   │   ├── dimensions.py
-│   │   └── country_risk.py
+│   │   ├── risk_engine.py
+│   │   └── risk_service.py
 │   │
-│   └── database/
+│   ├── db.py
+│   └── main.py
 │
-└── tests/
+├── migrations/
+└── scripts/
 ```
+
+La lógica de scoring estará centralizada en `scoring/`.
+
+La lógica de acceso a datos y exposición HTTP permanecerá separada de las fórmulas matemáticas del motor de riesgo.
+
+La estructura podrá evolucionar hacia módulos más especializados cuando aumente la complejidad del sistema.
 
 ## 27. Seed Data
 
-Antes de conectar fuentes reales se utilizará un dataset controlado.
+Antes de conectar fuentes reales se utilizará un dataset controlado de desarrollo.
 
-Objetivo inicial:
+El dataset se ampliará progresivamente hasta cubrir:
 
 ```text
 10–20 países
@@ -897,24 +1014,20 @@ varias evidencias por acontecimiento
 claims asociados
 impactos sobre subindicadores
 snapshots de Country Risk
+actualizaciones de eventos mediante event_timeline
 ```
 
+Durante las primeras fases se utilizará un subconjunto reducido para validar la arquitectura, el scoring, la API y la interfaz.
+
 El seed dataset no representará información OSINT real destinada a producción.
+
+Los datos sintéticos deberán identificarse como datos de desarrollo y no deberán interpretarse como evaluaciones geopolíticas reales.
 
 ## 28. Ingestión OSINT
 
 La ingestión automática queda fuera del primer MVP.
 
-La arquitectura reservará una capa independiente:
-
-```text
-ingestion/
-├── sources/
-├── normalizers/
-├── evidence/
-├── corroboration/
-└── event_matching/
-```
+La arquitectura reservará una capa independiente para su futura implementación.
 
 Posteriormente se podrán incorporar fuentes T0–T4.
 
@@ -925,23 +1038,24 @@ Desarrollo local:
 ```text
 docker-compose
 │
-├── postgres
-│   └── postgis
-│
-└── backend
+└── db
+    └── postgis
 ```
 
-El frontend se ejecutará inicialmente mediante Expo.
+El frontend se ejecutará inicialmente mediante Vite y el backend mediante FastAPI durante el desarrollo local.
 
 ## 30. Testing
 
-El MVP deberá contar con tests para:
+El MVP contará con tests automatizados para las principales capas del sistema.
 
 ### Scoring
 
 - decaimiento temporal;
+- ventana temporal de 7 días;
 - repetición;
 - relevancia;
+- impacto efectivo;
+- presión de eventos;
 - agregación de subindicadores;
 - dimensiones;
 - Country Risk;
@@ -950,6 +1064,7 @@ El MVP deberá contar con tests para:
 ### Datos
 
 - relaciones Event/Country;
+- Event Timeline;
 - Evidence/Claim;
 - duplicados;
 - versionado.
@@ -957,8 +1072,10 @@ El MVP deberá contar con tests para:
 ### API
 
 - respuestas correctas;
-- filtros;
-- errores.
+- estructura de respuestas;
+- búsqueda;
+- errores;
+- recursos inexistentes.
 
 ### Frontend
 
@@ -968,7 +1085,43 @@ El MVP deberá contar con tests para:
 - apertura/cierre de paneles;
 - búsqueda.
 
-## 31. Milestones
+Los tests del backend se ejecutarán mediante `pytest`.
+
+La lógica matemática del motor de riesgo deberá mantenerse cubierta por tests independientes de la base de datos.
+
+## 31. Estado actual de implementación
+
+La V1 se encuentra en una fase de MVP técnico funcional.
+
+Actualmente están implementados:
+
+- PostgreSQL + PostGIS;
+- catálogo de países;
+- modelo de eventos;
+- relaciones Event/Country;
+- Risk Impact;
+- snapshots de subindicadores;
+- snapshots de Country Risk;
+- motor de scoring V1.1;
+- API de países;
+- API de eventos;
+- API de Country Risk;
+- API de Situación;
+- API de búsqueda;
+- interfaz de mapa;
+- panel de país;
+- panel de evento;
+- pantalla Situación;
+- búsqueda;
+- tests automatizados del motor de riesgo, servicio de riesgo y API.
+
+El dataset de desarrollo continúa siendo sintético y reducido.
+
+La tabla `event_timeline` existe en el modelo de datos, pero su utilización funcional completa queda pendiente de implementación.
+
+La ingestión OSINT real todavía no forma parte del sistema operativo del MVP.
+
+## 32. Milestones
 
 ### M0 — Repository
 
@@ -986,9 +1139,9 @@ Implementar metodología V1.1 con tests matemáticos.
 
 Implementar los endpoints principales.
 
-### M4 — Mobile shell
+### M4 — Web shell
 
-Crear navegación, tres pestañas y componentes base.
+Crear navegación, tres pestañas y componentes base con React, Vite y TypeScript.
 
 ### M5 — Interactive Map
 
@@ -1026,7 +1179,7 @@ SITUATION
 SEARCH
 ```
 
-## 32. Criterio de finalización del MVP
+## 33. Criterio de finalización del MVP
 
 La V1 técnica será funcional cuando un usuario pueda:
 
@@ -1049,7 +1202,7 @@ La V1 técnica será funcional cuando un usuario pueda:
 17. buscar un acontecimiento;
 18. llegar desde el score hasta las evidencias que lo sustentan.
 
-## 33. Límites metodológicos
+## 34. Límites metodológicos
 
 Durante la implementación no se permitirá:
 
@@ -1064,13 +1217,13 @@ Durante la implementación no se permitirá:
 - eliminar silenciosamente duplicados;
 - sobrescribir evidencias originales.
 
-## 34. Principio de extensibilidad
+## 35. Principio de extensibilidad
 
 La V1 deberá ser pequeña, pero el núcleo de datos no deberá ser desechable.
 
 La arquitectura deberá poder incorporar posteriormente aviación, marítimo, satélite, infraestructura, energía, OSINT social, nuevas fuentes, nuevos subindicadores, nuevas categorías y nuevas señales OSINT.
 
-## 35. Regla final de desarrollo
+## 36. Regla final de desarrollo
 
 > No añadir funcionalidades porque sean técnicamente interesantes si no son necesarias para el MVP.
 
@@ -1092,8 +1245,8 @@ Ampliación
 
 La V1 no pretende demostrar cuántas fuentes puede ingerir STATION V, sino demostrar que el modelo completo funciona de extremo a extremo.
 
-## 36. Decisión técnica pendiente: motor de mapa
+## 37. Decisión técnica pendiente: motor de mapa
 
 La especificación funcional exige un mapa vectorial interactivo con zoom, desplazamiento, clustering y geometrías de países.
 
-La tecnología concreta del motor de mapas queda pendiente de decisión antes de implementar M5. Deberá evaluarse su compatibilidad con React Native/Expo, rendimiento, mapas vectoriales y gestión de tiles.
+La tecnología concreta del motor de mapas queda pendiente de decisión antes de implementar M5. Deberá evaluarse su compatibilidad con React, rendimiento, mapas vectoriales y gestión de tiles.
