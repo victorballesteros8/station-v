@@ -3,7 +3,13 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from backend.app.db import get_connection
-from backend.app.schemas.events import EventDetail, EventMapItem
+from backend.app.schemas.events import (
+    EventDetail,
+    EventMapItem,
+    EventUpdate,
+)
+from backend.app.services.event_service import update_event
+
 
 router = APIRouter(
     prefix="/api/events",
@@ -14,23 +20,24 @@ router = APIRouter(
 def build_event(row, countries):
     return {
         "id": row[0],
-        "category": row[1],
-        "subtype": row[2],
-        "title": row[3],
-        "status": row[4],
-        "severity": row[5],
-        "escalation_score": row[6],
-        "confidence": row[7],
+        "version": row[1],
+        "category": row[2],
+        "subtype": row[3],
+        "title": row[4],
+        "status": row[5],
+        "severity": row[6],
+        "escalation_score": row[7],
+        "confidence": row[8],
         "location": (
             {
-                "lat": row[8],
-                "lon": row[9],
+                "lat": row[9],
+                "lon": row[10],
             }
-            if row[8] is not None and row[9] is not None
+            if row[9] is not None and row[10] is not None
             else None
         ),
         "countries": countries,
-        "updated_at": row[10],
+        "updated_at": row[11],
     }
 
 
@@ -42,6 +49,7 @@ def list_events():
                 """
                 SELECT
                     e.id,
+                    ev.version,
                     ev.category,
                     ev.subtype,
                     ev.title,
@@ -69,7 +77,7 @@ def list_events():
                 cur.execute(
                     """
                     SELECT
-			c.id,
+                        c.id,
                         c.iso2,
                         c.name
                     FROM event_countries ec
@@ -103,6 +111,7 @@ def get_event(event_id: UUID):
                 """
                 SELECT
                     e.id,
+                    ev.version,
                     ev.category,
                     ev.subtype,
                     ev.title,
@@ -237,3 +246,27 @@ def get_event(event_id: UUID):
     event["evidence"] = evidence
 
     return event
+
+
+@router.patch("/{event_id}")
+def patch_event(
+    event_id: UUID,
+    update: EventUpdate,
+):
+    try:
+        result = update_event(
+            event_id,
+            update,
+        )
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail="Event not found",
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    return result

@@ -323,3 +323,118 @@ def test_risk_recalculate_unknown_country():
     )
 
     assert response.status_code == 404
+
+def test_event_patch_creates_new_version(test_event_id):
+    event_id = str(test_event_id)
+
+    before = client.get(
+        f"/api/events/{event_id}"
+    )
+
+    assert before.status_code == 200
+
+    previous_version = before.json()["version"]
+
+    response = client.patch(
+        f"/api/events/{event_id}",
+        json={
+            "title": "Evento de prueba — API",
+            "update_type": "general_update",
+            "description": "Actualización realizada mediante la API.",
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["event_id"] == event_id
+    assert data["version"] == previous_version + 1
+    assert data["update_type"] == "general_update"
+    assert data["description"] == (
+        "Actualización realizada mediante la API."
+    )
+
+    after = client.get(
+        f"/api/events/{event_id}"
+    )
+
+    assert after.status_code == 200
+
+    after_data = after.json()
+
+    assert after_data["version"] == previous_version + 1
+    assert after_data["title"] == "Evento de prueba — API"
+
+def test_event_patch_returns_404_for_unknown_event():
+    response = client.patch(
+        "/api/events/00000000-0000-0000-0000-000000000000",
+        json={
+            "update_type": "general_update",
+            "description": "Evento inexistente.",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Event not found"
+
+
+def test_event_patch_rejects_invalid_update_type():
+    event_id = "34a5118f-8b83-435e-948e-66bb69f13526"
+
+    response = client.patch(
+        f"/api/events/{event_id}",
+        json={
+            "update_type": "invalid_type",
+            "description": "Tipo inválido.",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "Invalid update_type" in response.json()["detail"]
+
+
+def test_event_patch_preserves_unchanged_fields(test_event_id):
+    event_id = str(test_event_id)
+
+    before = client.get(
+        f"/api/events/{event_id}"
+    )
+
+    assert before.status_code == 200
+
+    before_data = before.json()
+
+    response = client.patch(
+        f"/api/events/{event_id}",
+        json={
+            "title": "Evento de prueba — actualizado",
+            "update_type": "general_update",
+            "description": "Actualización informativa.",
+        },
+    )
+
+    assert response.status_code == 200
+
+    after = client.get(
+        f"/api/events/{event_id}"
+    )
+
+    assert after.status_code == 200
+
+    after_data = after.json()
+
+    assert after_data["version"] == before_data["version"] + 1
+
+    assert after_data["title"] == (
+        "Evento de prueba — actualizado"
+    )
+
+    assert after_data["category"] == before_data["category"]
+    assert after_data["subtype"] == before_data["subtype"]
+    assert after_data["status"] == before_data["status"]
+    assert after_data["severity"] == before_data["severity"]
+    assert after_data["confidence"] == before_data["confidence"]
+    assert after_data["escalation_score"] == (
+        before_data["escalation_score"]
+    )

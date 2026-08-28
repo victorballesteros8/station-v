@@ -43,8 +43,23 @@ class EventEvidence(BaseModel):
     source: EventSource
     claims: list[EventClaim] = []
 
+class EventUpdate(BaseModel):
+    category: str | None = None
+    subtype: str | None = None
+    title: str | None = None
+    summary: str | None = None
+    analyst_summary: str | None = None
+    status: str | None = None
+    severity: str | None = None
+    escalation_score: float | None = None
+    confidence: str | None = None
+
+    update_type: str
+    description: str | None = None
+
 class EventMapItem(BaseModel):
     id: UUID
+    version: int
     category: str
     subtype: str
     title: str
@@ -58,6 +73,7 @@ class EventMapItem(BaseModel):
 
 class EventDetail(BaseModel):
     id: UUID
+    version: int
     category: str
     subtype: str
     title: str
