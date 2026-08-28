@@ -71,6 +71,12 @@ class EventMapItem(BaseModel):
     countries: list[EventCountry]
     updated_at: datetime
 
+class EventTimelineEntry(BaseModel):
+    timestamp: datetime
+    update_type: str
+    description: str | None = None
+    version: int | None = None
+
 class EventDetail(BaseModel):
     id: UUID
     version: int
@@ -84,4 +90,5 @@ class EventDetail(BaseModel):
     location: EventLocation | None = None
     countries: list[EventCountry]
     updated_at: datetime
+    timeline: list[EventTimelineEntry] = []
     evidence: list[EventEvidence] = []

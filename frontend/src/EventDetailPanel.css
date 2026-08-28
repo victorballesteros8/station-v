@@ -100,14 +100,106 @@
   align-items: center;
   gap: 6px;
   padding: 5px 8px;
-  border: 1px solid #303943;
-  background: #141a21;
-  font-size: 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.event-detail-country:hover {
+  opacity: 0.7;
 }
 
 .event-detail-country span {
   font-size: 14px;
 }
+
+/* Timeline */
+
+.event-detail-timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: 18px;
+}
+
+.event-detail-timeline::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 4px;
+  width: 1px;
+  background: #303943;
+}
+
+.event-timeline-entry {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 0 0 18px;
+}
+
+.event-timeline-entry:last-child {
+  padding-bottom: 0;
+}
+
+.event-timeline-marker {
+  position: absolute;
+  top: 4px;
+  left: -18px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #10151b;
+  border-radius: 50%;
+  background: #8c98a5;
+  box-shadow: 0 0 0 1px #303943;
+}
+
+.event-timeline-content {
+  min-width: 0;
+  width: 100%;
+}
+
+.event-timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.event-timeline-header strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.event-timeline-version {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border: 1px solid #303943;
+  color: #8c98a5;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.event-timeline-content time {
+  display: block;
+  margin-top: 3px;
+  color: #687480;
+  font-size: 10px;
+}
+
+.event-timeline-content p {
+  margin: 6px 0 0;
+  color: #aab4bf;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* Evidence */
 
 .event-detail-evidence {
   display: flex;
@@ -220,18 +312,8 @@
   .event-detail-meta {
     grid-template-columns: 1fr 1fr;
   }
-}
 
-.event-detail-country {
-  border: 0;
-  background: transparent;
-  color: inherit;
-
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-}
-
-.event-detail-country:hover {
-  opacity: 0.7;
+  .event-detail-timeline {
+    padding-left: 16px;
+  }
 }

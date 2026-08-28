@@ -38,6 +38,13 @@ export interface EventEvidence {
   claims: EventClaim[]
 }
 
+export interface EventTimelineEntry {
+  timestamp: string
+  update_type: string
+  description: string | null
+  version: number | null
+}
+
 export interface EventMapItem {
   id: string
   category: string
@@ -53,12 +60,13 @@ export interface EventMapItem {
 }
 
 export interface EventDetail extends EventMapItem {
+  timeline: EventTimelineEntry[]
   evidence: EventEvidence[]
 }
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL
-  
+
 export async function getEvents(): Promise<EventMapItem[]> {
   const response = await fetch(`${API_BASE_URL}/api/events`)
 

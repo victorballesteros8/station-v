@@ -112,6 +112,45 @@ def test_event_detail_returns_existing_event():
 
     assert data["id"] == event_id
 
+def test_event_detail_returns_timeline():
+    event_id = "34a5118f-8b83-435e-948e-66bb69f13526"
+
+    response = client.get(
+        f"/api/events/{event_id}"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "timeline" in data
+    assert isinstance(data["timeline"], list)
+    assert len(data["timeline"]) >= 1
+
+    first_entry = data["timeline"][0]
+
+    assert "timestamp" in first_entry
+    assert "update_type" in first_entry
+    assert "description" in first_entry
+    assert "version" in first_entry
+
+def test_event_detail_timeline_is_ordered():
+    event_id = "34a5118f-8b83-435e-948e-66bb69f13526"
+
+    response = client.get(
+        f"/api/events/{event_id}"
+    )
+
+    assert response.status_code == 200
+
+    timeline = response.json()["timeline"]
+
+    timestamps = [
+        entry["timestamp"]
+        for entry in timeline
+    ]
+
+    assert timestamps == sorted(timestamps)
 
 def test_event_detail_returns_404_for_unknown_event():
     response = client.get(

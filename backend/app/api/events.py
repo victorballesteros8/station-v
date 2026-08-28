@@ -165,6 +165,34 @@ def get_event(event_id: UUID):
             cur.execute(
                 """
                 SELECT
+                    et.timestamp,
+                    et.update_type,
+                    et.description,
+                    ev.version
+                FROM event_timeline et
+                LEFT JOIN event_versions ev
+                    ON ev.id = et.event_version_id
+                WHERE et.event_id = %s
+                ORDER BY et.timestamp ASC
+                """,
+                (event_id,),
+            )
+
+            timeline_rows = cur.fetchall()
+
+            timeline = [
+                {
+                    "timestamp": timeline_row[0],
+                    "update_type": timeline_row[1],
+                    "description": timeline_row[2],
+                    "version": timeline_row[3],
+                }
+                for timeline_row in timeline_rows
+            ]
+
+            cur.execute(
+                """
+                SELECT
                     evi.id,
                     evi.title,
                     evi.url,
@@ -243,6 +271,7 @@ def get_event(event_id: UUID):
                 )
 
     event = build_event(row, countries)
+    event["timeline"] = timeline
     event["evidence"] = evidence
 
     return event
@@ -254,19 +283,14 @@ def patch_event(
     update: EventUpdate,
 ):
     try:
-        result = update_event(
-            event_id,
-            update,
-        )
-    except LookupError as exc:
-        raise HTTPException(
-            status_code=404,
-            detail="Event not found",
-        ) from exc
+        return update_event(event_id, update)
     except ValueError as exc:
         raise HTTPException(
             status_code=422,
             detail=str(exc),
         ) from exc
-
-    return result
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc

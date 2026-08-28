@@ -57,6 +57,30 @@ function formatAssertionStatus(status: string): string {
   return labels[status] ?? status
 }
 
+function formatTimelineType(updateType: string): string {
+  const labels: Record<string, string> = {
+    initial_detection: "Detección inicial",
+    general_update: "Actualización",
+    status_change: "Cambio de estado",
+    occurrence: "Nueva ocurrencia",
+  }
+
+  return labels[updateType] ?? updateType
+}
+
+function formatTimelineDate(timestamp: string): string {
+  const date = new Date(timestamp)
+
+  if (Number.isNaN(date.getTime())) {
+    return timestamp
+  }
+
+  return new Intl.DateTimeFormat("es-ES", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date)
+}
+
 function getCountryFlag(iso2: string): string {
   if (!/^[A-Za-z]{2}$/.test(iso2)) {
     return ""
@@ -161,6 +185,52 @@ function EventDetailPanel({
             </button>
           ))}
         </div>
+      </section>
+
+      <section className="event-detail-section">
+        <h3>Historial</h3>
+
+        {event.timeline.length === 0 ? (
+          <p className="event-detail-empty">
+            No hay historial disponible.
+          </p>
+        ) : (
+          <div className="event-detail-timeline">
+            {event.timeline.map((entry, index) => (
+              <article
+                className="event-timeline-entry"
+                key={`${entry.timestamp}-${entry.version ?? index}`}
+              >
+                <div
+                  className="event-timeline-marker"
+                  aria-hidden="true"
+                />
+
+                <div className="event-timeline-content">
+                  <div className="event-timeline-header">
+                    <strong>
+                      {formatTimelineType(entry.update_type)}
+                    </strong>
+
+                    {entry.version !== null && (
+                      <span className="event-timeline-version">
+                        v{entry.version}
+                      </span>
+                    )}
+                  </div>
+
+                  <time dateTime={entry.timestamp}>
+                    {formatTimelineDate(entry.timestamp)}
+                  </time>
+
+                  {entry.description && (
+                    <p>{entry.description}</p>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="event-detail-section">
