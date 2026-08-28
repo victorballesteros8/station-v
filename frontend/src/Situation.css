@@ -1,0 +1,567 @@
+.situation {
+  width: 100%;
+  min-height: calc(100vh - 72px);
+  box-sizing: border-box;
+  padding: 20px;
+  text-align: left;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.situation-header {
+  margin-bottom: 20px;
+}
+
+.situation-header h2 {
+  margin: 0;
+}
+
+.situation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.situation-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+  background: var(--bg);
+  box-sizing: border-box;
+}
+
+.situation-card-wide {
+  grid-column: 1 / -1;
+}
+
+.situation-card h3 {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+/* Cabeceras de las tablas de países */
+
+.situation-table-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+
+  min-height: 32px;
+  padding: 0 0 8px;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.situation-table-header span:last-child {
+  text-align: right;
+}
+
+/* Listas */
+
+.situation-list {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Filas de países */
+
+.situation-row {
+  min-width: 0;
+  min-height: 44px;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+
+  gap: 16px;
+
+  border-top: 1px solid var(--border);
+}
+
+.situation-row:first-child {
+  border-top: none;
+}
+
+.situation-row > strong {
+  min-width: 0;
+
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text-h);
+
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* País */
+
+.situation-country {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+  min-width: 0;
+
+  padding: 0;
+
+  border: 0;
+  background: transparent;
+
+  color: var(--text-h);
+
+  text-align: left;
+  font: inherit;
+
+  cursor: pointer;
+}
+
+.situation-country:hover {
+  background: transparent;
+}
+
+.situation-country:focus-visible {
+  outline: 1px solid var(--text-h);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Cabecera de eventos */
+
+.situation-event-header {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 2.4fr)
+    minmax(100px, 1.1fr)
+    85px
+    65px;
+
+  align-items: center;
+  gap: 18px;
+
+  min-height: 32px;
+  padding: 0 12px 8px;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  box-sizing: border-box;
+}
+
+.situation-event-header span:nth-child(2) {
+  text-align: left;
+}
+
+.situation-event-header span:nth-child(3),
+.situation-event-header span:nth-child(4) {
+  text-align: center;
+}
+
+/* Filas de eventos */
+
+.situation-event-row {
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 2.4fr)
+    minmax(100px, 1.1fr)
+    85px
+    65px;
+
+  align-items: center;
+  gap: 18px;
+
+  padding: 0 12px;
+
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+
+  background: transparent;
+  color: var(--text-h);
+
+  font: inherit;
+  text-align: left;
+
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.situation-event-row:first-child {
+  border-top: none;
+}
+
+.situation-event-row:hover {
+  background: var(--border);
+}
+
+.situation-event-row:focus-visible {
+  outline: 1px solid var(--text-h);
+  outline-offset: -1px;
+}
+
+.situation-event {
+  display: flex;
+  align-items: center;
+  gap: 0;
+
+  min-width: 0;
+}
+
+.situation-event > span:last-child {
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Países de los eventos */
+
+.situation-event-countries {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+
+  gap: 6px 10px;
+
+  min-width: 0;
+  max-width: 100%;
+}
+
+.situation-event-country {
+  display: inline-flex;
+  min-width: 0;
+}
+
+/* Severidad */
+
+.situation-event-severity {
+  text-align: center;
+
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+
+  color: var(--text);
+
+  white-space: nowrap;
+}
+
+.situation-event-severity.low {
+  color: #5fa87a;
+}
+
+.situation-event-severity.moderate {
+  color: #d8b94a;
+}
+
+.situation-event-severity.high {
+  color: #e58b3a;
+}
+
+.situation-event-severity.critical {
+  color: #d94a4a;
+}
+
+/* Escalada */
+
+.situation-event-row > strong {
+  min-width: 0;
+
+  text-align: center;
+
+  font-family: var(--mono);
+  font-size: 14px;
+
+  white-space: nowrap;
+}
+
+.situation-event-row > strong.low {
+  color: #5fa87a;
+}
+
+.situation-event-row > strong.moderate {
+  color: #d8b94a;
+}
+
+.situation-event-row > strong.high {
+  color: #e58b3a;
+}
+
+.situation-event-row > strong.critical {
+  color: #d94a4a;
+}
+
+/* Riesgo global */
+
+.situation-global-risk {
+  min-height: 110px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.situation-global-risk strong {
+  font-family: var(--mono);
+  font-size: 42px;
+  line-height: 1;
+  color: var(--text-h);
+}
+
+/* Estado vacío */
+
+.empty-state {
+  padding: 14px 0;
+
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* Identidad de país */
+
+.country-identity {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+
+  min-width: 0;
+}
+
+.country-flag {
+  width: 22px;
+  flex: 0 0 22px;
+
+  font-size: 17px;
+  line-height: 1;
+}
+
+.country-name {
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.country-code {
+  width: auto;
+  margin-left: 2px;
+
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text);
+}
+
+/* Responsive */
+
+@media (max-width: 700px) {
+  .situation {
+    padding: 14px;
+  }
+
+  .situation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .situation-card-wide {
+    grid-column: auto;
+  }
+
+  .situation-card {
+    padding: 14px;
+  }
+
+  /* Tablas de países */
+
+  .situation-table-header {
+    gap: 8px;
+    font-size: 9px;
+  }
+
+  .situation-row {
+    gap: 8px;
+  }
+
+  .situation-row > strong {
+    font-size: 12px;
+  }
+
+  /* Cabecera de eventos */
+
+  .situation-event-header {
+    grid-template-columns:
+      minmax(0, 2fr)
+      minmax(42px, 0.7fr)
+      58px
+      45px;
+
+    gap: 8px;
+
+    padding-left: 6px;
+    padding-right: 6px;
+
+    font-size: 8px;
+  }
+
+  /* Filas de eventos */
+
+  .situation-event-row {
+    grid-template-columns:
+      minmax(0, 2fr)
+      minmax(42px, 0.7fr)
+      58px
+      45px;
+
+    gap: 8px;
+
+    min-height: 52px;
+
+    padding-left: 6px;
+    padding-right: 6px;
+
+    font-size: 12px;
+  }
+
+  .situation-event {
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .situation-event > span:last-child {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+
+    overflow: hidden;
+
+    white-space: normal;
+    text-overflow: clip;
+
+    line-height: 1.3;
+  }
+
+  /* En móvil, los países se representan solo con bandera */
+
+  .situation-event-countries {
+    max-width: 55px;
+
+    justify-content: flex-start;
+
+    gap: 4px;
+  }
+
+  .situation-event-country .country-name {
+    display: none;
+  }
+
+  .situation-event-country .country-identity {
+    gap: 0;
+  }
+
+  .situation-event-country .country-flag {
+    width: auto;
+    flex: 0 0 auto;
+
+    font-size: 15px;
+  }
+
+  .situation-event-severity {
+    font-size: 9px;
+    text-align: center;
+  }
+
+  .situation-event-row > strong {
+    font-size: 12px;
+    text-align: center;
+  }
+
+  /* Riesgo global */
+
+  .situation-global-risk {
+    min-height: 90px;
+  }
+
+  .situation-global-risk strong {
+    font-size: 36px;
+  }
+
+  /* Identidad de país */
+
+  .country-identity {
+    gap: 7px;
+  }
+
+  .country-flag {
+    width: 20px;
+    flex-basis: 20px;
+    font-size: 16px;
+  }
+
+  .country-name {
+    font-size: 13px;
+  }
+}
+
+.situation-event-status-icon {
+  flex: 0 0 auto;
+  width: 16px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 13px;
+  line-height: 1;
+}
+
+.situation-event-status-icon.emerging {
+  opacity: 0.9;
+}
+
+.situation-event-status-icon.active {
+  opacity: 0.95;
+}
+
+.situation-event-status-icon.stable {
+  opacity: 0.8;
+}
+
+.situation-event-status-icon.decreasing {
+  opacity: 0.85;
+}
+
+.situation-event-status-icon.finished {
+  opacity: 0.75;
+}
+
+@media (max-width: 700px) {
+  .situation-event-status-icon {
+    width: 14px;
+    font-size: 11px;
+  }
+}
