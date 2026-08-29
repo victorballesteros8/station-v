@@ -847,6 +847,31 @@ CRS = 0.25 I
 
 Todos los scores se expresarán en el intervalo 0–100.
 
+### 21.3 Recalculación y acumulación
+
+El motor de scoring deberá ser determinista respecto al estado de los datos de entrada.
+
+La ejecución repetida del motor sobre un mismo conjunto de eventos, evidencias y ocurrencias no deberá incrementar artificialmente el riesgo.
+
+Un mismo `RiskImpact` no podrá incorporarse repetidamente al estado de un subindicador únicamente por ejecutar de nuevo el proceso de cálculo.
+
+La evaluación del riesgo deberá poder reconstruirse a partir de los impactos válidos en el instante de cálculo, sin depender del número de veces que se haya ejecutado previamente el motor.
+
+Se distinguirán los siguientes casos:
+
+- una nueva detección de un EVENT podrá generar un `RiskImpact`;
+- una nueva `occurrence` podrá generar una nueva contribución al subindicador cuando corresponda;
+- una nueva evidencia podrá modificar la evaluación del EVENT o de su impacto cuando aporte información relevante;
+- un `general_update` no generará automáticamente un nuevo impacto;
+- un `status_change` no generará automáticamente un nuevo impacto;
+- una nueva ejecución del motor sin cambios relevantes en los datos de entrada no generará una nueva contribución del mismo `RiskImpact`.
+
+El `event_timeline` conservará la secuencia temporal de actualizaciones del EVENT, pero sus entradas no deberán interpretarse automáticamente como nuevos impactos de riesgo.
+
+Los `risk_subindicator_snapshots` conservarán las evaluaciones históricas del subindicador. La existencia de un snapshot anterior no deberá utilizarse por sí misma como justificación para volver a aplicar un `RiskImpact` ya contabilizado.
+
+La lógica de acumulación deberá mantener trazabilidad entre los impactos considerados, los subindicadores afectados y el snapshot resultante.
+
 ## 22. Trend
 
 Trend será independiente del Country Risk.
