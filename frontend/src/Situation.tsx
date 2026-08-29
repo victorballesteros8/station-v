@@ -32,7 +32,7 @@ function formatTrend(value: number | null): string {
 function getStatusIcon(status: string): string {
   const icons: Record<string, string> = {
     emerging: "✨",
-    active: "⦿",
+    active: "⚿",
     stable: "≡",
     decreasing: "↘",
     finished: "✓",
@@ -50,6 +50,11 @@ function CountryRow({
   showTrend?: boolean
   onSelect: (countryId: number) => void
 }) {
+  const previousRisk =
+    country.trend !== null
+      ? country.country_risk - country.trend
+      : country.country_risk
+
   return (
     <div className="situation-row">
       <button
@@ -64,9 +69,26 @@ function CountryRow({
       </button>
 
       <strong>
-        {showTrend
-          ? formatTrend(country.trend)
-          : formatScore(country.country_risk)}
+        {showTrend ? (
+          <>
+            {formatScore(previousRisk)}{" "}
+            <span
+              style={{
+                fontSize: "0.8em",
+                fontWeight: 500,
+                color:
+                  country.trend !== null &&
+                  country.trend > 0
+                    ? "#d94a4a"
+                    : "#5fa87a",
+              }}
+            >
+              {formatTrend(country.trend)}
+            </span>
+          </>
+        ) : (
+          formatScore(country.country_risk)
+        )}
       </strong>
     </div>
   )
