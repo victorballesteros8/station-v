@@ -687,3 +687,97 @@ def test_country_risk_snapshot_inserts_country_risk_snapshot():
 
     assert len(snapshot_calls) == 1
     assert result.country_risk == pytest.approx(0.0)
+
+
+def test_country_risk_snapshot_is_deterministic_for_same_reference_time():
+    event_id = "event-1"
+    impact_id = "impact-1"
+
+    dimensions = [
+        (4, "military_activity", 1.0),
+    ]
+
+    subindicators = {
+        4: [
+            (29, "anomalous_military_exercises", 1.0),
+        ],
+    }
+
+    impacts = [
+        (
+            impact_id,
+            event_id,
+            29,
+            40.0,
+            0.7,
+            REFERENCE_TIME,
+        )
+    ]
+
+    previous_score = 10.0
+
+    first_cursor = configure_snapshot_cursor(
+        dimensions=dimensions,
+        subindicators_by_dimension=subindicators,
+        impacts=impacts,
+        previous_scores={
+            (321, 29): previous_score,
+        },
+        repetition_counts={
+            event_id: 0,
+        },
+        confidence_values=[
+            "high",
+        ],
+    )
+
+    first_connection = make_connection(first_cursor)
+
+    with patch(
+        "backend.app.scoring.risk_service.get_connection"
+    ) as mock_get_connection:
+        mock_get_connection.return_value.__enter__.return_value = (
+            first_connection
+        )
+
+        first_result = calculate_country_risk_snapshot(
+            country_id=321,
+            reference_time=REFERENCE_TIME,
+        )
+
+    second_cursor = configure_snapshot_cursor(
+        dimensions=dimensions,
+        subindicators_by_dimension=subindicators,
+        impacts=impacts,
+        previous_scores={
+            (321, 29): previous_score,
+        },
+        repetition_counts={
+            event_id: 0,
+        },
+        confidence_values=[
+            "high",
+        ],
+    )
+
+    second_connection = make_connection(second_cursor)
+
+    with patch(
+        "backend.app.scoring.risk_service.get_connection"
+    ) as mock_get_connection:
+        mock_get_connection.return_value.__enter__.return_value = (
+            second_connection
+        )
+
+        second_result = calculate_country_risk_snapshot(
+            country_id=321,
+            reference_time=REFERENCE_TIME,
+        )
+
+    assert second_result.military_activity == pytest.approx(
+        first_result.military_activity
+    )
+
+    assert second_result.country_risk == pytest.approx(
+        first_result.country_risk
+    )
