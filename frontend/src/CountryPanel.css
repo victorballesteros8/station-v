@@ -115,18 +115,85 @@
 }
 
 .country-dimension {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 14px;
 
-  padding: 9px 0;
+  padding: 8px 0;
 
-  font-size: 12px;
+  font-size: 11px;
 }
 
-.country-dimension strong {
+.country-dimension-main {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+}
+
+.country-dimension-main > span:first-child {
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.country-dimension-weight {
+  flex-shrink: 0;
+
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 9px;
+  color: var(--text);
+  opacity: 0.65;
+}
+
+.country-dimension > strong {
+  align-self: center;
+
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.country-subindicators {
+  grid-column: 1 / -1;
+
+  display: flex;
+  flex-direction: column;
+
+  margin-top: 2px;
+  padding-left: 10px;
+
+  border-left: 1px solid var(--border);
+}
+
+.country-subindicator {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+
+  padding: 4px 0 4px 8px;
+
+  font-size: 10px;
+  color: var(--text);
+}
+
+.country-subindicator span {
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.country-subindicator strong {
+  flex-shrink: 0;
+
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 500;
 }
 
 .country-muted {
@@ -168,6 +235,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .country-event strong {
@@ -212,5 +280,9 @@
 
   .country-risk-score {
     font-size: 32px;
+  }
+
+  .country-dimension {
+    font-size: 11px;
   }
 }

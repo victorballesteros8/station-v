@@ -23,22 +23,27 @@ const DIMENSIONS = [
   {
     key: "internal_instability",
     label: "Inestabilidad interna",
+    weight: 25,
   },
   {
     key: "conflict_violence",
     label: "Conflicto y violencia",
+    weight: 25,
   },
   {
     key: "international_tension",
     label: "Tensión internacional",
+    weight: 20,
   },
   {
     key: "military_activity",
     label: "Actividad militar",
+    weight: 15,
   },
   {
     key: "pressure_stress",
     label: "Presión / estrés",
+    weight: 15,
   },
 ] as const
 
@@ -125,7 +130,12 @@ function CountryPanel({
     )
   }
 
-  const { country, risk, events } = data
+  const {
+    country,
+    risk,
+    subindicators,
+    events,
+  } = data
 
   return (
     <aside className="country-panel">
@@ -173,20 +183,67 @@ function CountryPanel({
             <h3>DIMENSIONES</h3>
 
             <div className="country-dimensions">
-              {DIMENSIONS.map((dimension) => (
-                <div
-                  className="country-dimension"
-                  key={dimension.key}
-                >
-                  <span>{dimension.label}</span>
+              {DIMENSIONS.map((dimension) => {
+                const score =
+                  risk[dimension.key]
 
-                  <strong>
-                    {risk[
-                      dimension.key
-                    ].toFixed(2)}
-                  </strong>
-                </div>
-              ))}
+                const relevantSubindicators =
+                  subindicators.filter(
+                    (subindicator) =>
+                      subindicator.score > 0,
+                  )
+
+                return (
+                  <div
+                    className="country-dimension"
+                    key={dimension.key}
+                  >
+                    <div className="country-dimension-main">
+                      <span>
+                        {dimension.label}
+                      </span>
+
+                      <span className="country-dimension-weight">
+                        {dimension.weight}%
+                      </span>
+                    </div>
+
+                    <strong>
+                      {score.toFixed(2)}
+                    </strong>
+
+                    {dimension.key ===
+                      "conflict_violence" &&
+                      relevantSubindicators.length >
+                        0 && (
+                        <div className="country-subindicators">
+                          {relevantSubindicators.map(
+                            (subindicator) => (
+                              <div
+                                className="country-subindicator"
+                                key={
+                                  subindicator.id
+                                }
+                              >
+                                <span>
+                                  {
+                                    subindicator.name
+                                  }
+                                </span>
+
+                                <strong>
+                                  {subindicator.score.toFixed(
+                                    2,
+                                  )}
+                                </strong>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      )}
+                  </div>
+                )
+              })}
             </div>
           </section>
         </>
@@ -219,7 +276,9 @@ function CountryPanel({
 
                 <div className="country-event-meta">
                   <span>
-                    {formatSeverity(event.severity)}
+                    {formatSeverity(
+                      event.severity,
+                    )}
                   </span>
 
                   {event.escalation_score !==
