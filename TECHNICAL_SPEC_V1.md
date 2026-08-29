@@ -758,6 +758,25 @@ confidence
 
 Esto permitirá reconstruir la evolución temporal del país.
 
+### Unicidad temporal de los snapshots
+
+Cada combinación de `country_id`, `subindicator_id` y `timestamp`
+deberá identificar un único `risk_subindicator_snapshot`.
+
+La base de datos deberá impedir la existencia de múltiples
+`risk_subindicator_snapshots` para el mismo país, subindicador e instante
+de cálculo.
+
+Del mismo modo, cada combinación de `country_id` y `timestamp` deberá
+identificar un único `risk_snapshot`.
+
+La base de datos deberá impedir la existencia de múltiples
+`risk_snapshots` para el mismo país e instante de cálculo.
+
+Los índices existentes podrán mantenerse para optimizar las consultas,
+pero la unicidad deberá estar garantizada mediante una restricción o
+índice único.
+
 ## 21. Motor de scoring
 
 El motor implementará las reglas oficiales de V1.1.
