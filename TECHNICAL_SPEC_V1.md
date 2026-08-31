@@ -1347,7 +1347,71 @@ No será:
 
 El indicador utilizará los Country Risk como información de entrada, pero incorporará la importancia sistémica estructural de cada país mediante su clasificación por Tier.
 
-### 23.10 Interdependencia
+### 23.10 Cobertura y estado de disponibilidad
+
+El Global Risk podrá calcularse aunque no exista información de Country Risk
+para todos los países del universo STATION V.
+
+La ausencia de un snapshot válido no se interpretará como Country Risk = 0.
+Los países sin información válida quedarán excluidos del cálculo, de acuerdo
+con las reglas definidas para cada Tier.
+
+Para evaluar la representatividad del indicador se calcularán dos métricas:
+
+```
+Cobertura global =
+países con Country Risk válido / total de países del universo STATION V
+```
+
+```
+Cobertura sistémica =
+países Tier 1 y Tier 2 con Country Risk válido /
+total de países Tier 1 y Tier 2
+```
+
+La cobertura no modificará matemáticamente el valor del Global Risk.
+Se utilizará exclusivamente como indicador de disponibilidad y
+representatividad de los datos.
+
+El estado de cobertura se clasificará de la siguiente forma:
+
+```
+INSUFICIENTE
+Cobertura global < 25 %
+o
+Cobertura sistémica < 50 %
+```
+
+```
+PROVISIONAL
+
+Cobertura global >= 25 %
+y
+Cobertura sistémica >= 50 %
+
+pero no se cumplen simultáneamente los criterios de estado OPERATIVO.
+```
+
+```
+OPERATIVO
+
+Cobertura global >= 60 %
+y
+Cobertura sistémica >= 80 %
+```
+
+Cuando el estado sea INSUFICIENTE o PROVISIONAL, el frontend podrá mostrar
+un indicador visual asociado al panel de Global Risk para advertir de la
+limitación de cobertura.
+
+El estado OPERATIVO no requerirá un indicador visual adicional.
+
+La cobertura constituye un metadato de calidad y representatividad del
+indicador y no debe confundirse con el nivel de riesgo expresado por
+Global Risk.
+
+
+### 23.11 Interdependencia
 
 La V1 no incorporará todavía una medida explícita de interdependencia o contagio entre países.
 
