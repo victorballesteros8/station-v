@@ -6,17 +6,20 @@ from typing import Any
 from psycopg.types.json import Jsonb
 
 from backend.app.db import get_connection
+from backend.app.osint.common.claim_persistence import (
+    _persist_claim,
+)
 from backend.app.osint.common.evidence_persistence import (
     upsert_evidence,
 )
 from backend.app.osint.usgs.claim_builder import build_usgs_claim
-from backend.app.osint.common.claim_persistence import (
-    _persist_claim,
-)
 from backend.app.osint.usgs.client import fetch_usgs_feed
 from backend.app.osint.usgs.normalizer import (
     USGSEarthquake,
     normalize_usgs_feed,
+)
+from backend.app.services.event_resolution import (
+    resolve_evidence_event,
 )
 
 
@@ -99,24 +102,16 @@ def _get_or_create_source(cur: Any) -> str:
         """,
         {
             **USGS_SOURCE_CONFIG,
-            "coverage": _json_value(
-                USGS_SOURCE_CONFIG["coverage"]
-            ),
-            "roles": _json_value(
-                USGS_SOURCE_CONFIG["roles"]
-            ),
-            "expertise": _json_value(
-                USGS_SOURCE_CONFIG["expertise"]
-            ),
+            "coverage": _json_value(USGS_SOURCE_CONFIG["coverage"]),
+            "roles": _json_value(USGS_SOURCE_CONFIG["roles"]),
+            "expertise": _json_value(USGS_SOURCE_CONFIG["expertise"]),
         },
     )
 
     return str(cur.fetchone()[0])
 
 
-def _build_structured_data(
-    earthquake: USGSEarthquake,
-) -> Jsonb:
+def _build_structured_data(earthquake: USGSEarthquake) -> Jsonb:
     return Jsonb(
         {
             "provider": "USGS",
@@ -156,6 +151,7 @@ def _upsert_evidence(
         {
             "source_id": source_id,
             "external_id": earthquake.external_id,
+            "external_episode_id": None,
             "published_at": earthquake.time,
             "retrieved_at": retrieved_at,
             "title": earthquake.place,
@@ -167,21 +163,16 @@ def _upsert_evidence(
             "evidence_quality": 100.0,
             "first_seen_at": retrieved_at,
             "last_seen_at": retrieved_at,
-            "structured_data": _build_structured_data(
-                earthquake
-            ),
+            "structured_data": _build_structured_data(earthquake),
         },
     )
 
 
-def ingest_usgs(
-    payload: dict[str, Any] | None = None,
-) -> int:
+def ingest_usgs(payload: dict[str, Any] | None = None) -> int:
     if payload is None:
         payload = fetch_usgs_feed()
 
     earthquakes = normalize_usgs_feed(payload)
-
     retrieved_at = datetime.now(timezone.utc)
 
     with get_connection() as conn:
@@ -196,14 +187,30 @@ def ingest_usgs(
                     retrieved_at,
                 )
 
-                claim = build_usgs_claim(
-                    earthquake
-                )
+                claim = build_usgs_claim(earthquake)
+                _persist_claim(cur, evidence_id, claim)
 
-                _persist_claim(
+                resolve_evidence_event(
                     cur,
-                    evidence_id,
-                    claim,
+                    evidence_id=evidence_id,
+                    source_id=source_id,
+                    source_name=USGS_SOURCE_NAME,
+                    external_event_id=earthquake.external_id,
+                    title=earthquake.place or "Earthquake detected by USGS",
+                    summary=claim.statement,
+                    subtype="earthquake",
+                    time_start=earthquake.time,
+                    latitude=earthquake.latitude,
+                    longitude=earthquake.longitude,
+                    canonical_data={
+                        "provider": "USGS",
+                        "external_event_id": earthquake.external_id,
+                        "magnitude": earthquake.magnitude,
+                        "place": earthquake.place,
+                        "latitude": earthquake.latitude,
+                        "longitude": earthquake.longitude,
+                        "depth": earthquake.depth,
+                    },
                 )
 
         conn.commit()
