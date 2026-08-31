@@ -271,8 +271,6 @@ La aplicación tendrá tres áreas principales y tres pestañas de navegación e
 
 No existirán pantallas independientes de países o acontecimientos en V1. Los detalles se mostrarán mediante paneles superpuestos.
 
-La navegación deberá permitir incorporar nuevas áreas funcionales en futuras versiones sin modificar el núcleo conceptual de la aplicación.
-
 ## 7. Mapa
 
 ### 7.1 Naturaleza
@@ -398,334 +396,140 @@ El panel mostrará:
 - última actualización;
 - resumen factual;
 - impacto humano cuando exista;
+- impacto material cuando exista;
 - países afectados;
-- impactos sobre subindicadores;
-- acceso a evidencias y fuentes.
+- actores;
+- timeline;
+- evidencias;
+- fuentes.
 
-La complejidad interna del EVENT no se trasladará íntegramente a la interfaz móvil.
+La visualización deberá distinguir entre información factual y valoración analítica.
 
 ## 10. Situación
 
-La pantalla Situación será un dashboard único.
+La pantalla Situación será un dashboard resumido de *situational awareness*.
 
-Contendrá inicialmente cinco paneles:
+### Elementos V1
 
-### 10.1 Riesgo global
+- Global Risk;
+- países con mayor Country Risk;
+- mayor deterioro 24 h;
+- mayor mejora 24 h;
+- eventos más relevantes.
 
-Mostrará un indicador agregado del nivel de riesgo sistémico internacional.
+El dashboard deberá priorizar legibilidad móvil y evitar información excesiva.
 
-La pregunta que deberá representar será:
+La información se calculará en backend.
 
-> ¿Está aumentando o disminuyendo la tensión/riesgo del sistema internacional en conjunto?
+## 11. Search
 
-El Riesgo Global no será una media simple de los Country Risk de todos los países.
+La búsqueda V1 permitirá localizar:
 
-Su cálculo tendrá en cuenta la importancia sistémica estructural de los países y la concentración del riesgo entre los principales actores del sistema internacional.
+- países;
+- acontecimientos.
 
-El indicador se expresará en una escala 0–100.
+No se implementará búsqueda full-text avanzada en V1.
 
-Niveles iniciales:
+## 12. Countries
 
-```text
-0–19      Bajo
-20–39     Elevado
-40–59     Alto
-60–79     Muy alto
-80–100    Crítico
-```
+El catálogo de países utilizará ISO 3166-1 alpha-2 y alpha-3 cuando exista código oficial.
 
-Estos niveles son categorías interpretativas del índice y no representan probabilidades.
+La geometría se gestionará mediante PostGIS.
 
-El Riesgo Global no representará una probabilidad de guerra, conflicto o guerra mundial.
+La V1 utilizará 196 entidades analíticas, incluyendo Palestina, Kosovo y Taiwán.
 
-### 10.2 Mayor Country Risk
+## 13. Eventos
 
-Ranking de países por Country Risk descendente.
+### 13.1 Naturaleza
 
-### 10.3 Mayor deterioro · 24 h
+Un EVENT representa un acontecimiento del mundo real suficientemente estructurado para ser mostrado y/o producir impactos.
 
-Países con mayor Trend positivo.
+No equivale a una noticia.
 
-### 10.4 Mayor mejora · 24 h
-
-Países con mayor Trend negativo.
-
-### 10.5 Eventos más relevantes
-
-Se mostrarán como máximo los 10 acontecimientos más relevantes con Severidad Alta o Crítica.
-
-La ordenación se realizará jerárquicamente:
-
-1. Severidad del acontecimiento, priorizando Crítica sobre Alta.
-2. Escalation Score descendente dentro de cada nivel de severidad.
-
-Por tanto, un acontecimiento Crítico con un Escalation Score inferior aparecerá antes que un acontecimiento Alto con un Escalation Score superior.
-
-Ejemplo:
-
-```text
-Crítica — 7.6
-Crítica — 6.8
-Alta — 9.2
-Alta — 8.5
-```
-
-Los acontecimientos con Severidad inferior a Alta no aparecerán en este panel.
-
-No se incluirá todavía un ranking regional.
-
-Podrán incorporarse paneles adicionales en futuras iteraciones sin modificar la arquitectura conceptual del dashboard.
-
-## 11. Búsqueda
-
-La pestaña principal se denominará **BUSCAR**.
-
-La búsqueda permitirá inicialmente:
-
-```text
-País
-
-Acontecimiento
-```
-
-La arquitectura se preparará para incorporar regiones posteriormente.
-
-Endpoint:
-
-```text
-GET /api/v1/search?q={query}
-```
-
-Los resultados estarán agrupados por tipo. La selección abrirá el correspondiente CountryPanel o EventPanel.
-
-La exploración y filtrado de acontecimientos se integrará en esta área y no constituirá una cuarta pestaña independiente en V1.
-
-## 12. Modelo de datos
-
-### 12.1 Country
-
-```text
-Country
----------
-
-id
-
-iso2
-
-iso3
-
-name
-
-geometry
-
-created_at
-
-updated_at
-```
-
-La geometría se almacenará mediante PostGIS.
-
-### 12.2 Event
+### 13.2 Campos conceptuales
 
 ```text
 Event
 ---------
-
 event_id
-
-event_version
-
 category
-
 subtype
-
 title
-
 summary
-
 analyst_summary
-
-country_id
-
-region
-
-place
-
-latitude
-
-longitude
-
+location
 location_precision
-
+region
+place
 time_start
-
 time_end
-
 time_precision
-
 status
-
 severity
-
-escalation_score
-
-confidence
-
-first_detected_at
-
-last_evidence_at
-
-created_at
-
-updated_at
-
-duplicate_of
-
-current_version_id
+Escalation Score
+Confidence
+countries
+actors
+version
 ```
 
-El EVENT será versionable. Cada modificación estructural relevante del acontecimiento generará una nueva versión conservando el estado anterior.
+### 13.3 Categorías
 
-La versión vigente estará identificada mediante `current_version_id`. Las versiones históricas no se sobrescribirán.
-
-Los duplicados conservarán su relación mediante `duplicate_of` y no se eliminarán silenciosamente.
-
-### 12.3 Event Timeline
+Las categorías V1 serán:
 
 ```text
-EventTimeline
----------
-
-id
-
-event_id
-
-timestamp
-
-update_type
-
-description
-
-event_version_id
-
-created_at
+conflict_violence
+protests_unrest
+military_activity
+border_tension
+political_crisis
+disaster
+critical_infrastructure
+security_terrorism
 ```
 
-`event_timeline` registrará la evolución temporal de un EVENT.
-
-Tipos iniciales de actualización:
+### 13.4 Severidad
 
 ```text
-initial_detection
-
-general_update
-
-status_change
-
-occurrence
+info
+low
+medium
+high
+critical
 ```
 
-`initial_detection`
+La severidad representa impacto/riesgo del acontecimiento.
 
-Registra la detección o creación inicial del EVENT.
+### 13.5 Escalation Score
 
-`general_update`
+El Escalation Score será un valor 0–10.
 
-Registra una actualización relevante que no implique necesariamente un cambio de estado o una nueva ocurrencia independiente.
+Se utilizará únicamente para acontecimientos High/Critical.
 
-`status_change`
+Representará potencial de ampliación/escalada, no gravedad absoluta.
 
-Registra cambios relevantes en el estado operativo del EVENT.
-
-`occurrence`
-
-Registra una nueva ocurrencia relacionada con el mismo acontecimiento o incidente.
-
-Una `occurrence` no crea automáticamente un EVENT nuevo. Se mantiene dentro del EVENT existente siempre que exista continuidad suficiente para considerar que forma parte del mismo acontecimiento.
-
-Cuando una actualización modifique información estructural del EVENT, deberá generarse una nueva versión. La actualización del timeline conservará la referencia a `event_version_id` cuando corresponda.
-
-El timeline y el versionado tienen funciones diferentes:
-
-`event_versions` conserva el estado estructurado del EVENT en cada versión;
-
-`event_timeline` conserva la secuencia temporal de actualizaciones relevantes.
-
-La información del timeline deberá mantener trazabilidad hacia el EVENT y, cuando corresponda, hacia la versión del evento que originó la actualización.
-
-## 13. Países afectados
-
-Se utilizará una relación muchos-a-muchos:
+### 13.6 Estados
 
 ```text
-event_countries
-
-----------------
-
-event_id
-
-country_id
-
-relationship_type
+emerging
+active
+stable
+decreasing
+finished
 ```
 
-Valores iniciales:
+### 13.7 Versionado
 
-```text
-directly_affected
+Los cambios relevantes del evento generarán nuevas versiones.
 
-indirectly_affected
-```
+Las versiones mantendrán un histórico.
 
-Las relaciones indirectas no generarán automáticamente impacto sobre Country Risk.
-
-## 14. Source
-
-El Source Registry seguirá los campos establecidos en el documento de fuentes.
-
-```text
-Source
----------
-
-source_id
-
-name
-
-tier
-
-source_class
-
-source_type
-
-geographic_scope
-
-coverage
-
-reliability
-
-roles
-
-detection_capability
-
-corroboration_capability
-
-expertise
-
-independence_group
-
-access_method
-
-status
-```
-
-## 15. Evidence
+## 14. Evidence
 
 ```text
 Evidence
 ---------
-
 evidence_id
-
 event_id
 
 source_id
@@ -737,27 +541,16 @@ retrieved_at
 title
 
 url
-
 author
-
 language
-
 content_type
-
 evidence_type
-
 source_role
-
 relationship_to_event
-
 independence_group
-
 evidence_quality
-
 first_seen_at
-
 last_seen_at
-
 content_hash
 ```
 
@@ -765,13 +558,9 @@ Tipos iniciales:
 
 ```text
 report
-
 statement
-
 observation
-
 dataset
-
 measurement
 ```
 
@@ -779,424 +568,297 @@ Roles:
 
 ```text
 detection
-
-corroboration
-
-primary_confirmation
-
+confirmation
 context
-
-quantitative_data
+analysis
 ```
 
-## 16. Claims
+Una Evidence no implica automáticamente que el contenido sea verdadero.
+
+La Evidence representa la existencia de una fuente o material que sustenta una afirmación.
+
+## 15. Claims
 
 ```text
 Claim
 ---------
-
 claim_id
-
 evidence_id
-
 claim_type
-
 statement
-
 assertion_status
-
 confidence
-
-created_at
-
-updated_at
-```
-
-Tipos iniciales:
-
-```text
-event_occurrence
-
-casualty
-
-location
-
-time
-
-actor
-
-attribution
-
-damage
-
-military_activity
-
-political_statement
-
-consequence
-
-status
 ```
 
 Estados:
 
 ```text
 confirmed
-
 reported
-
 claimed
-
 disputed
-
 inferred
 ```
 
-Un claim no confirmado no se convertirá automáticamente en un hecho del EVENT.
+Un CLAIM expresa una afirmación derivada de una Evidence.
 
-## 17. Event ↔ Evidence
-
-No se almacenarán URLs como única prueba de un acontecimiento.
-
-La relación será:
+## 16. Source Registry
 
 ```text
-SOURCE
-
-   ↓
-
-EVIDENCE
-
-   ↓
-
-CLAIM
-
-   ↓
-
-EVENT
-```
-
-Se podrán conservar evidencias principales, contradictorias, de actualización y de sustitución de información anterior.
-
-## 18. Risk Impact
-
-Los acontecimientos no modificarán directamente una dimensión ni Country Risk.
-
-La relación será:
-
-```text
-Event
-
-  ↓
-
-RiskImpact
-
-  ↓
-
-Subindicator
-
-  ↓
-
-Dimension
-
-  ↓
-
-Country Risk
-```
-
-Modelo mínimo:
-
-```text
-RiskImpact
+Source
 ---------
-
-id
-
-event_id
-
-country_id
-
-subindicator_id
-
-base_impact
-
-relevance
-
-temporal_weight
-
-repetition_weight
-
-effective_impact
-
-created_at
+source_id
+name
+tier
+source_class
+source_type
+geographic_scope
+coverage
+reliability
+roles
+detection_capability
+corroboration_capability
+expertise
+independence_group
+access_method
+status
 ```
 
-El impacto efectivo seguirá:
+### Tiers de fuente
 
 ```text
-I_effective = I_base × R × W_t × W_r
+T0
+T1
+T2
+T3
+T4
 ```
 
-## 19. Subindicadores y dimensiones
+La arquitectura debe permitir registrar múltiples fuentes para un mismo evento.
 
-La base de datos tendrá entidades normalizadas para `Dimension` y `Subindicator`.
+## 17. Confidence
 
-Las cinco dimensiones oficiales son:
+Confidence representará la confianza en la información disponible.
+
+Valores de usuario:
 
 ```text
-internal_instability
-
-conflict_violence
-
-international_tension
-
-military_activity
-
-pressure_stress
+low
+medium
+high
 ```
 
-Pesos:
+Confidence no equivale a severidad.
+
+No existirá un único número de Confidence visible al usuario en V1.
+
+## 18. Trend
+
+Trend representará evolución reciente.
+
+Para V1:
 
 ```text
-25%
-
-25%
-
-20%
-
-15%
-
-15%
-```
-
-Los subindicadores se conservarán individualmente para garantizar trazabilidad y permitir futuras recalibraciones.
-
-### Importancia sistémica por Tier
-
-Los países dispondrán de una clasificación estructural de importancia sistémica independiente de su Country Risk actual.
-
-La clasificación inicial será:
-
-```text
-Tier 1
-Potencias sistémicas globales.
-
-Tier 2
-Actores con capacidad significativa de transmisión internacional o regional.
-
-Tier 3
-Actores cuya importancia sistémica es principalmente regional o limitada.
-```
-
-La clasificación no dependerá de acontecimientos concretos, conflictos específicos ni del Country Risk actual.
-
-La importancia sistémica se determinará a partir de capacidades estructurales como, entre otras:
-
-- peso económico;
-- capacidad militar;
-- capacidades estratégicas y nucleares;
-- población;
-- posición geográfica;
-- recursos;
-- energía;
-- comercio y conectividad;
-- capacidad tecnológica e industrial;
-- influencia diplomática;
-- pertenencia a alianzas e instituciones;
-- capacidad de transmisión internacional.
-
-Tier 2 podrá distinguir internamente entre T2-A, T2-B y T2-Strategic cuando resulte necesario para la clasificación, sin que estas subcategorías impliquen fórmulas diferentes de Country Risk.
-
-La clasificación de Tier será un atributo estructural del país y no se modificará como consecuencia de cambios temporales en su Country Risk.
-
-## 20. Risk Snapshot
-
-Se almacenarán evaluaciones históricas.
-
-```text
-RiskSnapshot
----------
-
-id
-
-country_id
-
-timestamp
-
-internal_instability
-
-conflict_violence
-
-international_tension
-
-military_activity
-
-pressure_stress
-
-country_risk
-
-confidence
-```
-
-Esto permitirá reconstruir la evolución temporal del país.
-
-### Unicidad temporal de los snapshots
-
-Cada combinación de `country_id`, `subindicator_id` y `timestamp`
-
-deberá identificar un único `risk_subindicator_snapshot`.
-
-La base de datos deberá impedir la existencia de múltiples
-
-`risk_subindicator_snapshots` para el mismo país, subindicador e instante
-
-de cálculo.
-
-Del mismo modo, cada combinación de `country_id` y `timestamp` deberá
-
-identificar un único `risk_snapshot`.
-
-La base de datos deberá impedir la existencia de múltiples
-
-`risk_snapshots` para el mismo país e instante de cálculo.
-
-Los índices existentes podrán mantenerse para optimizar las consultas,
-
-pero la unicidad deberá estar garantizada mediante una restricción o
-
-índice único.
-
-## 21. Motor de scoring
-
-El motor implementará las reglas oficiales de V1.1.
-
-### Ventana temporal
-
-La ventana de cálculo de impactos de eventos será de **7 días (168 horas)**.
-
-Los eventos con una antigüedad superior a 7 días tendrán un peso temporal de 0 para el cálculo del impacto efectivo.
-
-### Decaimiento
-
-Se utilizará una semivida de 48 horas:
-
-```text
-W_t = 2^(-t/48)
-```
-
-donde `t` representa la antigüedad del evento en horas.
-
-Valores de referencia:
-
-```text
-0 h       → 1.0000
-
-48 h      → 0.5000
-
-96 h      → 0.2500
-
-168 h     → 0.0884
-
->168 h    → 0
-```
-
-Los eventos futuros respecto al momento de referencia tendrán peso temporal 1.0.
-
-### Repetición
-
-```text
-1.º   1.00
-
-2.º   0.60
-
-3.º   0.35
-
-4.º   0.20
-
-5.º+  0.10
-```
-
-### Impacto efectivo
-
-```text
-I_effective = I_base × R × W_t × W_r
-```
-
-Los valores de entrada se limitarán a sus rangos válidos antes de realizar el cálculo.
-
-### Presión acumulada
-
-La presión de eventos se calculará mediante una función de saturación:
-
-```text
-P = 100 × (1 - exp(-Σ I_effective / K))
-```
-
-con:
-
-```text
-K = 3.0
-```
-
-La presión resultante estará limitada al intervalo 0–100.
-
-### Estado del subindicador
-
-```text
-S_t = 0.65 × S_(t-1) + 0.35 × P
-```
-
-donde:
-
-- `S_(t-1)` es el estado anterior del subindicador;
-- `P` es la presión actual de eventos.
-
-### Country Risk
-
-```text
-CRS = 0.25 I
-    + 0.25 C
-    + 0.20 T
-    + 0.15 M
-    + 0.15 P
-```
-
-Todos los scores se expresarán en el intervalo 0–100.
-
-### 21.3 Recalculación y acumulación
-
-El motor de scoring deberá ser determinista respecto al estado de los datos de entrada.
-
-La ejecución repetida del motor sobre un mismo conjunto de eventos, evidencias y ocurrencias no deberá incrementar artificialmente el riesgo.
-
-Un mismo `RiskImpact` no podrá incorporarse repetidamente al estado de un subindicador únicamente por ejecutar de nuevo el proceso de cálculo.
-
-La evaluación del riesgo deberá poder reconstruirse a partir de los impactos válidos en el instante de cálculo, sin depender del número de veces que se haya ejecutado previamente el motor.
-
-Se distinguirán los siguientes casos:
-
-- una nueva detección de un EVENT podrá generar un `RiskImpact`;
-- una nueva `occurrence` podrá generar una nueva contribución al subindicador cuando corresponda;
-- una nueva evidencia podrá modificar la evaluación del EVENT o de su impacto cuando aporte información relevante;
-- un `general_update` no generará automáticamente un nuevo impacto;
-- un `status_change` no generará automáticamente un nuevo impacto;
-- una nueva ejecución del motor sin cambios relevantes en los datos de entrada no generará una nueva contribución del mismo `RiskImpact`.
-
-El `event_timeline` conservará la secuencia temporal de actualizaciones del EVENT, pero sus entradas no deberán interpretarse automáticamente como nuevos impactos de riesgo.
-
-Los `risk_subindicator_snapshots` conservarán las evaluaciones históricas del subindicador. La existencia de un snapshot anterior no deberá utilizarse por sí misma como justificación para volver a aplicar un `RiskImpact` ya contabilizado.
-
-La lógica de acumulación deberá mantener trazabilidad entre los impactos considerados, los subindicadores afectados y el snapshot resultante.
-
-## 22. Trend
-
-Trend será independiente del Country Risk.
-
-```text
-Trend_24h = CRS_t - CRS_(t-24h)
+Trend 24 h = Country Risk actual − Country Risk de referencia 24 h antes
 ```
 
 Trend no se incluirá como componente adicional del Country Risk.
+
+## 19. Country Risk
+
+Country Risk será un índice 0–100.
+
+Se calculará mediante cinco dimensiones:
+
+```text
+Internal Instability       25 %
+Conflict & Violence        25 %
+International Tension      20 %
+Military Activity          15 %
+Pressure / Stress          15 %
+```
+
+### Fórmula
+
+```text
+Country Risk =
+0.25 × Internal Instability +
+0.25 × Conflict & Violence +
+0.20 × International Tension +
+0.15 × Military Activity +
+0.15 × Pressure / Stress
+```
+
+No se añadirá ninguna constante adicional.
+
+El resultado estará limitado a 0–100.
+
+### 19.1 Niveles de Country Risk
+
+```text
+0–19   Bajo
+20–39  Elevado
+40–59  Alto
+60–79  Muy alto
+80–100 Crítico
+```
+
+Los niveles de Country Risk son independientes de la severidad de los eventos.
+
+### 19.2 Actualización
+
+Country Risk podrá recalcularse cuando:
+
+- aparezca nueva Evidence relevante;
+- cambie un EVENT relevante;
+- cambie un Risk Impact;
+- se ejecute una actualización programada.
+
+Cada cálculo generará un snapshot histórico.
+
+## 20. Dimensiones
+
+### 20.1 Internal Instability
+
+Subindicadores V1:
+
+```text
+Protestas y movilización social
+Disturbios / alteración del orden público
+Violencia política
+Terrorismo / insurgencia interna
+Crisis institucional
+Violencia entre grupos
+Huelgas / disrupción social
+```
+
+### 20.2 Conflict & Violence
+
+```text
+Conflictos armados activos
+Enfrentamientos / violencia armada
+Ataques contra población
+Terrorismo
+Insurgencia / guerra irregular
+Impacto humano / víctimas
+Extensión geográfica
+Persistencia del conflicto
+```
+
+### 20.3 International Tension
+
+```text
+Incidentes fronterizos
+Disputas territoriales
+Crisis diplomáticas
+Amenazas / retórica oficial
+Sanciones
+Intervención / implicación extranjera
+Relaciones con aliados y bloques
+Aislamiento / deterioro internacional
+```
+
+### 20.4 Military Activity
+
+```text
+Movilización
+Despliegues / movimientos de tropas
+Actividad militar fronteriza
+Actividad aérea
+Actividad naval
+Ejercicios militares anómalos
+Empleo de armamento
+Preparación / postura militar
+```
+
+### 20.5 Pressure / Stress
+
+```text
+Situación económica
+Crisis humanitaria
+Seguridad alimentaria
+Energía
+Desplazamientos de población
+Servicios esenciales
+Presión social
+Capacidad institucional
+Desastres / vulnerabilidad ambiental
+```
+
+Cada dimensión será una combinación ponderada de sus subindicadores.
+
+Los pesos exactos quedan definidos en el catálogo metodológico de V1.1.
+
+## 21. Risk Impact
+
+Cada EVENT podrá producir uno o varios Risk Impact.
+
+```text
+Risk Impact
+-----------
+event_id
+country_id
+subindicator_id
+base_impact
+relevance
+temporal_weight
+repetition_weight
+effective_impact
+```
+
+### Fórmula conceptual
+
+```text
+Effective Impact =
+Base Impact × Relevance × Temporal Weight × Repetition Weight
+```
+
+Los valores estarán limitados a los rangos establecidos en la base de datos.
+
+### Relevancia
+
+Relevance representará la relación entre el acontecimiento y el subindicador.
+
+Un mismo EVENT podrá afectar a varios subindicadores con distinta Relevance.
+
+### Temporal Weight
+
+El impacto disminuirá con el tiempo.
+
+La V1 utilizará una función temporal definida en el motor de scoring.
+
+### Repetition Weight
+
+La repetición de acontecimientos similares no generará crecimiento lineal infinito.
+
+Se utilizará una función de saturación.
+
+## 22. Matriz semántica
+
+Cada categoría/subtipo podrá afectar a distintos subindicadores.
+
+La asignación se realizará mediante una matriz semántica.
+
+Ejemplo:
+
+```text
+EVENT
+│
+├── CATEGORY
+│
+├── SUBTYPE
+│
+└── LOCATION
+        │
+        ▼
+Semantic Matrix
+        │
+        ├── Subindicator A
+        ├── Subindicator B
+        └── Subindicator C
+```
+
+La matriz semántica no generará por sí misma el valor final de Country Risk.
 
 ## 23. Global Risk
 
@@ -1222,9 +884,7 @@ donde:
 
 ```text
 T1 = presión de los países Tier 1
-
 T2 = presión de los países Tier 2
-
 T3 = presión de los países Tier 3
 ```
 
@@ -1232,7 +892,7 @@ El resultado final estará limitado al intervalo 0–100.
 
 ### 23.2 Presión Tier 1
 
-La presión de Tier 1 combinará intensidad, riesgo medio y amplitud del deterioro dentro del grupo:
+La presión Tier 1 se calculará mediante:
 
 ```text
 T1 = 0.50 × I + 0.30 × A + 0.20 × B
@@ -1242,9 +902,7 @@ donde:
 
 ```text
 I = intensidad del riesgo Tier 1
-
 A = Country Risk medio de Tier 1
-
 B = amplitud del deterioro de Tier 1
 ```
 
@@ -1262,9 +920,7 @@ I = 0.60 × max(T1) + 0.40 × mean(Top4 T1)
 
 Esta combinación permite que una situación extrema de una potencia sistémica tenga un efecto significativo sin ignorar el deterioro simultáneo de varias potencias.
 
-### 23.4 Riesgo medio Tier 1
-
-El componente `A` será:
+### 23.4 Country Risk medio Tier 1
 
 ```text
 A = mean(T1)
@@ -1272,11 +928,14 @@ A = mean(T1)
 
 donde se utilizarán los Country Risk de los países Tier 1 disponibles.
 
+Si no existe ningún Country Risk válido para Tier 1, la presión Tier 1 será 0.
+
+La ausencia de un snapshot válido se interpretará como ausencia de información,
+no como Country Risk = 0.
+
 Este componente representa el nivel medio de riesgo existente dentro del núcleo sistémico.
 
 ### 23.5 Amplitud del deterioro Tier 1
-
-El componente `B` representará la proporción de países Tier 1 cuyo Country Risk sea igual o superior a 50:
 
 ```text
 B = 100 × N(Country Risk ≥ 50) / N(Tier 1)
@@ -1286,21 +945,33 @@ Esto permitirá diferenciar entre una situación de riesgo concentrada en una ú
 
 ### 23.6 Presión Tier 2
 
-La presión Tier 2 se calculará utilizando los ocho países Tier 2 con mayor Country Risk:
+La presión Tier 2 se calculará utilizando los ocho países Tier 2 con mayor Country Risk disponibles:
 
 ```text
-T2 = mean(Top8 T2)
+T2 = mean(Top8 T2 disponibles)
 ```
+
+Si existen menos de ocho países Tier 2 con Country Risk disponible, se utilizarán únicamente los países disponibles.
+
+No se imputará un Country Risk de 0 a los países que no dispongan de un snapshot válido.
+
+Si no existe ningún Country Risk válido para Tier 2, la presión Tier 2 será 0.
 
 La clasificación interna de Tier 2 podrá distinguir entre T2-A, T2-B y T2-Strategic, pero estas categorías no utilizarán fórmulas diferentes en el cálculo del Global Risk V1.
 
 ### 23.7 Presión Tier 3
 
-La presión Tier 3 se calculará utilizando los diez países Tier 3 con mayor Country Risk:
+La presión Tier 3 se calculará utilizando los diez países Tier 3 con mayor Country Risk disponibles:
 
 ```text
-T3 = mean(Top10 T3)
+T3 = mean(Top10 T3 disponibles)
 ```
+
+Si existen menos de diez países Tier 3 con Country Risk disponible, se utilizarán únicamente los países disponibles.
+
+No se imputará un Country Risk de 0 a los países que no dispongan de un snapshot válido.
+
+Si no existe ningún Country Risk válido para Tier 3, la presión Tier 3 será 0.
 
 La contribución de Tier 3 será deliberadamente limitada para evitar que un elevado número de crisis regionales de países con menor importancia sistémica domine el indicador.
 
@@ -1326,284 +997,183 @@ No será:
 - una estimación de probabilidad de guerra mundial;
 - una suma de acontecimientos;
 - una media simple de Country Risk;
-- un sustituto del Country Risk.
+- una representación de relaciones causales exhaustivas del sistema internacional.
 
 El indicador utilizará los Country Risk como información de entrada, pero incorporará la importancia sistémica estructural de cada país mediante su clasificación por Tier.
 
-### 23.10 Interdependencia
+### 23.10 Cobertura y estado de disponibilidad
+
+El Global Risk podrá calcularse aunque no exista información de Country Risk para todos los países del universo STATION V.
+
+La ausencia de un snapshot válido no se interpretará como Country Risk = 0. Los países sin información válida quedarán excluidos del cálculo, de acuerdo con las reglas definidas para cada Tier.
+
+Para evaluar la representatividad del indicador se calcularán dos métricas:
+
+```text
+Cobertura global =
+países con Country Risk válido / total de países del universo STATION V
+```
+
+```text
+Cobertura sistémica =
+países Tier 1 y Tier 2 con Country Risk válido /
+total de países Tier 1 y Tier 2
+```
+
+La cobertura no modificará matemáticamente el valor del Global Risk.
+Se utilizará exclusivamente como indicador de disponibilidad y representatividad de los datos.
+
+El estado de cobertura se clasificará de la siguiente forma:
+
+```text
+INSUFICIENTE
+Cobertura global < 25 %
+o
+Cobertura sistémica < 50 %
+```
+
+```text
+PROVISIONAL
+
+Cobertura global >= 25 %
+y
+Cobertura sistémica >= 50 %
+
+pero no se cumplen simultáneamente los criterios de estado OPERATIVO.
+```
+
+```text
+OPERATIVO
+
+Cobertura global >= 60 %
+y
+Cobertura sistémica >= 80 %
+```
+
+Cuando el estado sea INSUFICIENTE o PROVISIONAL, el frontend podrá mostrar un indicador visual asociado al panel de Global Risk para advertir de la limitación de cobertura.
+
+El estado OPERATIVO no requerirá un indicador visual adicional.
+
+La cobertura constituye un metadato de calidad y representatividad del indicador y no debe confundirse con el nivel de riesgo expresado por Global Risk.
+
+### 23.11 Interdependencia
 
 La V1 no incorporará todavía una medida explícita de interdependencia o contagio entre países.
 
-La fórmula V1 medirá:
+La arquitectura podrá incorporar posteriormente:
 
 ```text
-Country Risk
-      ↓
-Importancia sistémica
-      ↓
-Concentración y amplitud
-      ↓
-Global Risk
+Trade Exposure
+
+Energy Exposure
+
+Financial Exposure
+
+Military Alliances
+
+Supply Chain Exposure
+
+Strategic Infrastructure
 ```
 
-Los mecanismos de transmisión económica, energética, militar, logística u otras redes de interdependencia podrán incorporarse en versiones posteriores sin modificar el núcleo conceptual del indicador.
+Estas relaciones podrán modificar el impacto sistémico en versiones posteriores.
 
 ## 24. Confidence
 
 Confidence:
 
 ```text
-High
-
-Medium
-
-Low
+Confidence =
+f(Source Reliability,
+Independence,
+Corroboration,
+Recency)
 ```
 
-Será independiente del score y no actuará como multiplicador matemático.
+La fórmula exacta podrá evolucionar durante el desarrollo V1.
 
-La confianza dependerá de factores relacionados con calidad de fuentes, independencia, corroboración, fuentes primarias, consistencia, antigüedad y contradicciones.
+## 25. Risk Engine
 
-## 25. API
+El motor de riesgo será responsabilidad exclusiva del backend.
+
+Se dividirá en módulos lógicos:
+
+```text
+Evidence Layer
+      ↓
+Event Layer
+      ↓
+Risk Impact Layer
+      ↓
+Subindicator Layer
+      ↓
+Dimension Layer
+      ↓
+Country Risk Layer
+      ↓
+Global Risk Layer
+```
+
+Cada módulo deberá poder probarse individualmente.
+
+## 26. Historical Data
+
+Se conservarán snapshots históricos de Country Risk.
+
+Cada snapshot contendrá:
+
+```text
+country_id
+timestamp
+5 dimensions
+Country Risk
+Confidence
+```
+
+Posteriormente se podrán añadir series temporales más profundas.
+
+## 27. API
 
 La API será REST.
 
-Los endpoints funcionales V1 se estructurarán bajo el prefijo:
+Ejemplos conceptuales:
 
 ```text
-/api/v1
+GET /countries
+
+GET /countries/{id}
+
+GET /events
+
+GET /events/{id}
+
+GET /events/{id}/evidence
+
+GET /search
+
+GET /risk/{country_id}
+
+GET /risk/{country_id}/history
 ```
 
-Durante la fase actual de desarrollo existen algunos endpoints heredados bajo `/api`. Estos podrán mantenerse temporalmente por compatibilidad durante la construcción del MVP, pero los nuevos endpoints funcionales deberán utilizar `/api/v1`.
+El frontend no accederá directamente a PostgreSQL.
 
-### Países
+## 28. Base de datos
 
-```http
-GET /api/v1/countries/{country_id}
-```
+PostgreSQL + PostGIS.
 
-### Eventos
+La base deberá soportar:
 
-```http
-GET /api/v1/events
+- relaciones geográficas;
+- eventos;
+- evidencias;
+- claims;
+- snapshots;
+- histórico;
+- consultas temporales;
+- búsquedas eficientes.
 
-GET /api/v1/events/{event_id}
-```
-
-### Mapa
-
-```http
-GET /api/v1/map/events
-```
-
-Parámetros:
-
-```text
-min_lat
-
-max_lat
-
-min_lon
-
-max_lon
-
-zoom
-```
-
-### Riesgo
-
-```http
-POST /api/v1/risk/recalculate/{country_id}
-```
-
-### Situación
-
-```http
-GET /api/v1/situation
-```
-
-Respuesta lógica:
-
-```text
-top_risk
-
-deterioration_24h
-
-improvement_24h
-
-relevant_events
-```
-
-### Búsqueda
-
-```http
-GET /api/v1/search?q={query}
-```
-
-Los resultados podrán incluir países y acontecimientos.
-
-## 26. Estructura del frontend
-
-La implementación actual utiliza React, Vite y TypeScript.
-
-Estructura base:
-
-```text
-frontend/
-
-│
-
-├── public/
-
-│
-
-├── src/
-
-│   ├── api/
-
-│   │   ├── country.ts
-
-│   │   ├── events.ts
-
-│   │   ├── search.ts
-
-│   │   └── situation.ts
-
-│   │
-
-│   ├── components/
-
-│   │   └── CountryIdentity.tsx
-
-│   │
-
-│   ├── App.tsx
-
-│   ├── MapView.tsx
-
-│   ├── Situation.tsx
-
-│   ├── Search.tsx
-
-│   ├── CountryPanel.tsx
-
-│   ├── EventDetailPanel.tsx
-
-│   │
-
-│   ├── App.css
-
-│   ├── MapView.css
-
-│   ├── Situation.css
-
-│   ├── Search.css
-
-│   └── index.css
-
-│
-
-└── package.json
-```
-
-Las tres áreas principales de navegación son:
-
-```text
-MAPA
-
-SITUACIÓN
-
-BUSCAR
-```
-
-`CountryPanel` y `EventDetailPanel` son componentes de detalle superpuestos y no áreas principales de navegación.
-
-## 27. Estructura del backend
-
-La implementación actual utiliza una estructura modular sencilla:
-
-```text
-backend/
-
-│
-
-├── app/
-
-│   ├── api/
-
-│   │   ├── countries.py
-
-│   │   ├── country.py
-
-│   │   ├── events.py
-
-│   │   ├── risk.py
-
-│   │   ├── search.py
-
-│   │   └── situation.py
-
-│   │
-
-│   ├── models/
-
-│   ├── schemas/
-
-│   │   └── events.py
-
-│   │
-
-│   ├── scoring/
-
-│   │   ├── risk_engine.py
-
-│   │   └── risk_service.py
-
-│   │
-
-│   ├── db.py
-
-│   └── main.py
-
-│
-├── migrations/
-
-└── scripts/
-```
-
-La lógica de scoring estará centralizada en `scoring/`.
-
-La lógica de acceso a datos y exposición HTTP permanecerá separada de las fórmulas matemáticas del motor de riesgo.
-
-La estructura podrá evolucionar hacia módulos más especializados cuando aumente la complejidad del sistema.
-
-## 28. Seed Data
-
-Antes de conectar fuentes reales se utilizará un dataset controlado de desarrollo.
-
-El dataset se ampliará progresivamente hasta cubrir:
-
-```text
-10–20 países
-
-20–30 acontecimientos
-
-varias evidencias por acontecimiento
-
-claims asociados
-
-impactos sobre subindicadores
-
-snapshots de Country Risk
-
-actualizaciones de eventos mediante event_timeline
-```
-
-Durante las primeras fases se utilizará un subconjunto reducido para validar la arquitectura, el scoring, la API y la interfaz.
-
-El seed dataset no representará información OSINT real destinada a producción.
-
-Los datos sintéticos deberán identificarse como datos de desarrollo y no deberán interpretarse como evaluaciones geopolíticas reales.
+La integridad referencial será responsabilidad de la base de datos.
 
 ## 29. Ingestión OSINT
 
@@ -1769,250 +1339,123 @@ Una vez validado este circuito, se incorporarán progresivamente las fuentes res
 
 La incorporación de nuevas fuentes no deberá exigir modificar el núcleo conceptual de `SOURCE`, `EVIDENCE`, `CLAIM` y `EVENT`.
 
-## 30. Docker
+## 30. Testing
 
-Desarrollo local:
+La V1 deberá incluir tests automatizados para:
+
+- scoring;
+- normalización;
+- event lifecycle;
+- deduplicación;
+- API;
+- consultas críticas.
+
+Los tests serán parte integral del desarrollo.
+
+## 31. Seguridad
+
+La V1 no requerirá autenticación de usuarios.
+
+Se deberán aplicar:
+
+- validación de inputs;
+- parametrización SQL;
+- protección frente a XSS;
+- control de CORS;
+- manejo seguro de errores;
+- validación de payloads.
+
+Las claves y credenciales de APIs externas, cuando existan, nunca se almacenarán en el repositorio.
+
+## 32. Rendimiento
+
+La V1 priorizará:
+
+- carga rápida en móvil;
+- baja transferencia de datos;
+- consultas indexadas;
+- paginación;
+- consultas geográficas eficientes.
+
+El objetivo es mantener tiempos de respuesta bajos para operaciones habituales.
+
+## 33. Desarrollo incremental
+
+El proyecto se desarrollará por iteraciones.
+
+Cada iteración deberá:
 
 ```text
-docker-compose
-
-│
-
-└── db
-
-    └── postgis
+1. definir
+2. implementar
+3. probar
+4. validar
+5. documentar
 ```
 
-El frontend se ejecutará inicialmente mediante Vite y el backend mediante FastAPI durante el desarrollo local.
+No se incorporará complejidad antes de que la capa anterior sea estable.
 
-## 31. Testing
+## 34. Decisiones abiertas
 
-El MVP contará con tests automatizados para las principales capas del sistema.
+Quedan deliberadamente abiertas para fases posteriores:
 
-### Scoring
+- ingestión automática;
+- número exacto de fuentes OSINT;
+- integración de datos satelitales;
+- aviación;
+- marítimo;
+- interdependencia;
+- notificaciones;
+- usuarios;
+- IA auxiliar;
+- modelización histórica avanzada.
 
-- decaimiento temporal;
-- ventana temporal de 7 días;
-- repetición;
-- relevancia;
-- impacto efectivo;
-- presión de eventos;
-- agregación de subindicadores;
-- dimensiones;
-- Country Risk;
-- Trend;
-- Global Risk.
+Estas decisiones no deberán bloquear la V1 básica.
 
-### Datos
+## 35. Filosofía del sistema
 
-- relaciones Event/Country;
-- Event Timeline;
-- Evidence/Claim;
-- duplicados;
-- versionado.
+STATION V no pretende conocer todos los acontecimientos del mundo.
 
-### API
+Pretende identificar y estructurar aquellos acontecimientos que sean suficientemente relevantes para responder:
 
-- respuestas correctas;
-- estructura de respuestas;
-- búsqueda;
-- errores;
-- recursos inexistentes.
+> ¿Qué está ocurriendo?
+>
+> ¿Dónde?
+>
+> ¿Con qué gravedad?
+>
+> ¿Puede escalar?
+>
+> ¿Qué evidencia lo sustenta?
+>
+> ¿Qué efecto tiene sobre el riesgo del país?
 
-### Frontend
-
-- navegación entre las tres áreas principales;
-- selección de país;
-- selección de evento;
-- apertura/cierre de paneles;
-- búsqueda.
-
-Los tests del backend se ejecutarán mediante `pytest`.
-
-La lógica matemática del motor de riesgo deberá mantenerse cubierta por tests independientes de la base de datos.
-
-## 32. Estado actual de implementación
-
-La V1 se encuentra en una fase de MVP técnico funcional.
-
-Actualmente están implementados:
-
-- PostgreSQL + PostGIS;
-- catálogo de países;
-- modelo de eventos;
-- relaciones Event/Country;
-- Risk Impact;
-- snapshots de subindicadores;
-- snapshots de Country Risk;
-- motor de scoring V1.1;
-- API de países;
-- API de eventos;
-- API de Country Risk;
-- API de Situación;
-- API de búsqueda;
-- interfaz de mapa;
-- panel de país;
-- panel de evento;
-- pantalla Situación;
-- búsqueda;
-- tests automatizados del motor de riesgo, servicio de riesgo y API.
-
-El dataset de desarrollo continúa siendo sintético y reducido.
-
-La tabla `event_timeline` está implementada y se utiliza funcionalmente para registrar la evolución temporal de los acontecimientos.
-
-El sistema mantiene separación entre timeline y versionado: el timeline registra la secuencia temporal de actualizaciones y `event_versions` conserva los estados estructurados del EVENT.
-
-La ingestión OSINT real todavía no forma parte del sistema operativo del MVP.
-
-## 33. Milestones
-
-### M0 — Repository
-
-Crear la estructura inicial del repositorio y documentación base.
-
-### M1 — Database
-
-Implementar PostgreSQL/PostGIS y las entidades principales.
-
-### M2 — Scoring
-
-Implementar metodología V1.1 con tests matemáticos.
-
-### M3 — API
-
-Implementar los endpoints principales.
-
-### M4 — Web shell
-
-Crear navegación, tres pestañas y componentes base con React, Vite y TypeScript.
-
-### M5 — Interactive Map
-
-Implementar mapa, zoom, desplazamiento, países, marcadores, categorías, clustering y selección.
-
-### M6 — Panels
-
-Implementar CountryPanel y EventPanel.
-
-### M7 — Situation
-
-Implementar los cuatro paneles.
-
-### M8 — Search
-
-Implementar búsqueda de países y eventos.
-
-### M9 — End-to-end MVP
-
-Validar el circuito completo:
+El sistema priorizará:
 
 ```text
-EVENT
+Calidad
 
-↓
+sobre
 
-RISK
-
-↓
-
-API
-
-↓
-
-MAP
-
-↓
-
-PANEL
-
-↓
-
-SITUATION
-
-↓
-
-SEARCH
+Cantidad
 ```
 
-## 34. Criterio de finalización del MVP
-
-La V1 técnica será funcional cuando un usuario pueda:
-
-1. abrir STATION V;
-2. navegar por un mapa mundial interactivo;
-3. hacer zoom y desplazarse;
-4. identificar acontecimientos Alta/Crítica por categoría;
-5. seleccionar un acontecimiento;
-6. consultar su panel;
-7. consultar sus países afectados;
-8. seleccionar un país;
-9. consultar su Country Risk;
-10. consultar sus cinco dimensiones;
-11. consultar Trend y Confidence;
-12. abrir Situación;
-13. consultar los rankings;
-14. consultar deterioros y mejoras;
-15. consultar acontecimientos ordenados por Escalation Score;
-16. buscar un país;
-17. buscar un acontecimiento;
-18. llegar desde el score hasta las evidencias que lo sustentan.
-
-## 35. Límites metodológicos
-
-Durante la implementación no se permitirá:
-
-- convertir una noticia en EVENT automáticamente;
-- usar número de artículos como proxy de riesgo;
-- sumar impactos directamente al Country Risk;
-- utilizar Confidence como multiplicador;
-- utilizar Trend dentro del Country Risk;
-- calcular Escalation para eventos inferiores a Alta;
-- mostrar como confirmado un claim disputado;
-- inventar precisión geográfica;
-- eliminar silenciosamente duplicados;
-- sobrescribir evidencias originales.
-
-## 36. Principio de extensibilidad
-
-La V1 deberá ser pequeña, pero el núcleo de datos no deberá ser desechable.
-
-La arquitectura deberá poder incorporar posteriormente aviación, marítimo, satélite, infraestructura, energía, OSINT social, nuevas fuentes, nuevos subindicadores, nuevas categorías y nuevas señales OSINT.
-
-## 37. Regla final de desarrollo
-
-> No añadir funcionalidades porque sean técnicamente interesantes si no son necesarias para el MVP.
-
-La prioridad será:
-
 ```text
-Rigor
-
-↓
-
-Coherencia
-
-↓
-
 Trazabilidad
 
-↓
+sobre
 
-Funcionamiento
-
-↓
-
-Velocidad
-
-↓
-
-Ampliación
+Opacidad
 ```
 
-La V1 no pretende demostrar cuántas fuentes puede ingerir STATION V, sino demostrar que el modelo completo funciona de extremo a extremo.
+```text
+Señal
 
-## 38. Decisión técnica pendiente: motor de mapa
+sobre
 
-La especificación funcional exige un mapa vectorial interactivo con zoom, desplazamiento, clustering y geometrías de países.
+Ruido
+```
 
-La tecnología concreta del motor de mapas queda pendiente de decisión antes de implementar M5. Deberá evaluarse su compatibilidad con React, rendimiento, mapas vectoriales y gestión de tiles.
+---
+
+# FIN DE LA ESPECIFICACIÓN V1
