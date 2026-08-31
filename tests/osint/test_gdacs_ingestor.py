@@ -122,7 +122,7 @@ def test_ingest_gdacs_creates_source_evidence_and_claim():
 
     assert (
         evidence_params["source_role"]
-        == "observation"
+        == "detection"
     )
 
     claim_params = calls[3].args[1]
