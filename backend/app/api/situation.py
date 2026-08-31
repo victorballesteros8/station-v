@@ -179,7 +179,7 @@ def get_situation():
                 countries,
                 key=lambda item: item["country_risk"],
                 reverse=True,
-            )[:10]
+            )[:20]
 
             deterioration = sorted(
                 [

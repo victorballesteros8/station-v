@@ -1,4 +1,8 @@
-import { useEffect, useState } from "react"
+import {
+  type CSSProperties,
+  useEffect,
+  useState,
+} from "react"
 
 import CountryIdentity from "./components/CountryIdentity"
 
@@ -34,7 +38,7 @@ function getStatusIcon(status: string): string {
   const icons: Record<string, string> = {
     emerging: "📈",
     active: "🔔",
-    stable: "⏳",
+    stable: "⏸",
     decreasing: "📉",
     finished: "✅",
   }
@@ -60,6 +64,44 @@ function getRiskLevel(value: number): string {
   }
 
   return "critical"
+}
+
+function getGlobalRiskLevel(value: number): {
+  label: string
+  className: string
+} {
+  if (value < 20) {
+    return {
+      label: "BAJO",
+      className: "low",
+    }
+  }
+
+  if (value < 40) {
+    return {
+      label: "MODERADO",
+      className: "moderate",
+    }
+  }
+
+  if (value < 60) {
+    return {
+      label: "ALTO",
+      className: "high",
+    }
+  }
+
+  if (value < 80) {
+    return {
+      label: "MUY ALTO",
+      className: "very-high",
+    }
+  }
+
+  return {
+    label: "CRÍTICO",
+    className: "critical",
+  }
 }
 
 function CountryRow({
@@ -259,6 +301,10 @@ function Situation({
     )
   }
 
+  const globalRiskLevel = globalRisk
+    ? getGlobalRiskLevel(globalRisk.value)
+    : null
+
   return (
     <section className="situation">
       <div className="situation-header">
@@ -269,28 +315,55 @@ function Situation({
         <section className="situation-card">
           <h3>Riesgo global</h3>
 
-          <div className="situation-global-risk">
-            {globalRisk && (
+          <div
+            className={`situation-global-risk ${
+              globalRiskLevel?.className ?? ""
+            }`}
+          >
+            {globalRisk && globalRiskLevel && (
               <>
-                {globalRisk.coverage_status !== "operational" && (
+                {globalRisk.coverage_status !==
+                  "operational" && (
                   <span
                     className={`situation-global-risk-status ${globalRisk.coverage_status}`}
                     title={
-                      globalRisk.coverage_status === "insufficient"
+                      globalRisk.coverage_status ===
+                      "insufficient"
                         ? "Datos insuficientes"
                         : "Datos incompletos"
                     }
                     aria-label={
-                      globalRisk.coverage_status === "insufficient"
+                      globalRisk.coverage_status ===
+                      "insufficient"
                         ? "Datos insuficientes"
                         : "Datos incompletos"
                     }
                   />
                 )}
 
-                <strong>
-                  {formatScore(globalRisk.value)}
-                </strong>
+                <div className="situation-global-risk-gauge">
+                  <div
+                    className="situation-global-risk-gauge-fill"
+                    style={
+                      {
+                        "--risk-value": `${Math.min(
+                          Math.max(globalRisk.value, 0),
+                          100,
+                        )}%`,
+                      } as CSSProperties
+                    }
+                  />
+
+                  <div className="situation-global-risk-gauge-content">
+                    <strong>
+                      {formatScore(globalRisk.value)}
+                    </strong>
+
+                    <span>
+                      {globalRiskLevel.label}
+                    </span>
+                  </div>
+                </div>
               </>
             )}
           </div>
@@ -304,7 +377,7 @@ function Situation({
             <span>Country Risk</span>
           </div>
 
-          <div className="situation-list">
+          <div className="situation-list situation-top-risk-list">
             {topRisk.map((country) => (
               <CountryRow
                 key={country.country_id}

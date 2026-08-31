@@ -75,6 +75,27 @@
   min-width: 0;
 }
 
+/* Top 20 de riesgo: 5 filas visibles */
+
+.situation-top-risk-list {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.situation-top-risk-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.situation-top-risk-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.situation-top-risk-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
 /* Filas de países */
 
 .situation-row {
@@ -383,7 +404,7 @@
 .situation-global-risk {
   position: relative;
 
-  min-height: 110px;
+  min-height: 180px;
 
   display: flex;
   align-items: center;
@@ -409,11 +430,106 @@
   background: #d8b94a;
 }
 
-.situation-global-risk strong {
+.situation-global-risk-gauge {
+  --gauge-size: 150px;
+
+  position: relative;
+
+  width: var(--gauge-size);
+  height: var(--gauge-size);
+
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.situation-global-risk-gauge-fill {
+  position: absolute;
+  inset: 0;
+
+  border-radius: 50%;
+
+  background: conic-gradient(
+    from -90deg,
+    currentColor var(--risk-value),
+    #29313a var(--risk-value)
+  );
+
+  z-index: 0;
+}
+
+/*
+ * Círculo interior.
+ * Oculta completamente la parte central del gauge,
+ * dejando únicamente visible el aro exterior.
+ */
+.situation-global-risk-gauge::before {
+  content: "";
+
+  position: absolute;
+  inset: 18px;
+
+  border-radius: 50%;
+
+  background: var(--bg);
+
+  z-index: 1;
+}
+
+.situation-global-risk-gauge-content {
+  position: relative;
+
+  z-index: 2;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.situation-global-risk-gauge-content strong {
   font-family: var(--mono);
+
   font-size: 42px;
   line-height: 1;
-  color: var(--text-h);
+
+  font-weight: 700;
+
+  color: currentColor;
+}
+
+.situation-global-risk-gauge-content span {
+  margin-top: 6px;
+
+  font-size: 12px;
+  line-height: 1;
+
+  font-weight: 700;
+  letter-spacing: 0.04em;
+
+  color: currentColor;
+}
+
+.situation-global-risk.low {
+  color: #3b82f6;
+}
+
+.situation-global-risk.moderate {
+  color: #22c55e;
+}
+
+.situation-global-risk.high {
+  color: #eab308;
+}
+
+.situation-global-risk.very-high {
+  color: #f97316;
+}
+
+.situation-global-risk.critical {
+  color: #ef4444;
 }
 
 /* Estado vacío */
@@ -492,6 +608,12 @@
 
   .situation-row > strong {
     font-size: 12px;
+  }
+
+  /* Top 20 de riesgo */
+
+  .situation-top-risk-list {
+    max-height: 260px;
   }
 
   /* Cabecera de eventos */
@@ -586,11 +708,19 @@
   /* Riesgo global */
 
   .situation-global-risk {
-    min-height: 90px;
+    min-height: 170px;
   }
 
-  .situation-global-risk strong {
+  .situation-global-risk-gauge {
+    --gauge-size: 135px;
+  }
+
+  .situation-global-risk-gauge-content strong {
     font-size: 36px;
+  }
+
+  .situation-global-risk-gauge-content span {
+    font-size: 11px;
   }
 
   /* Identidad de país */
