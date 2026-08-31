@@ -928,11 +928,6 @@ A = mean(T1)
 
 donde se utilizarán los Country Risk de los países Tier 1 disponibles.
 
-Si no existe ningún Country Risk válido para Tier 1, la presión Tier 1 será 0.
-
-La ausencia de un snapshot válido se interpretará como ausencia de información,
-no como Country Risk = 0.
-
 Este componente representa el nivel medio de riesgo existente dentro del núcleo sistémico.
 
 ### 23.5 Amplitud del deterioro Tier 1
@@ -945,33 +940,21 @@ Esto permitirá diferenciar entre una situación de riesgo concentrada en una ú
 
 ### 23.6 Presión Tier 2
 
-La presión Tier 2 se calculará utilizando los ocho países Tier 2 con mayor Country Risk disponibles:
+La presión Tier 2 se calculará utilizando los ocho países Tier 2 con mayor Country Risk:
 
 ```text
-T2 = mean(Top8 T2 disponibles)
+T2 = mean(Top8 T2)
 ```
-
-Si existen menos de ocho países Tier 2 con Country Risk disponible, se utilizarán únicamente los países disponibles.
-
-No se imputará un Country Risk de 0 a los países que no dispongan de un snapshot válido.
-
-Si no existe ningún Country Risk válido para Tier 2, la presión Tier 2 será 0.
 
 La clasificación interna de Tier 2 podrá distinguir entre T2-A, T2-B y T2-Strategic, pero estas categorías no utilizarán fórmulas diferentes en el cálculo del Global Risk V1.
 
 ### 23.7 Presión Tier 3
 
-La presión Tier 3 se calculará utilizando los diez países Tier 3 con mayor Country Risk disponibles:
+La presión Tier 3 se calculará utilizando los diez países Tier 3 con mayor Country Risk:
 
 ```text
-T3 = mean(Top10 T3 disponibles)
+T3 = mean(Top10 T3)
 ```
-
-Si existen menos de diez países Tier 3 con Country Risk disponible, se utilizarán únicamente los países disponibles.
-
-No se imputará un Country Risk de 0 a los países que no dispongan de un snapshot válido.
-
-Si no existe ningún Country Risk válido para Tier 3, la presión Tier 3 será 0.
 
 La contribución de Tier 3 será deliberadamente limitada para evitar que un elevado número de crisis regionales de países con menor importancia sistémica domine el indicador.
 
@@ -1338,6 +1321,7 @@ El objetivo será demostrar que el sistema puede:
 Una vez validado este circuito, se incorporarán progresivamente las fuentes restantes.
 
 La incorporación de nuevas fuentes no deberá exigir modificar el núcleo conceptual de `SOURCE`, `EVIDENCE`, `CLAIM` y `EVENT`.
+
 
 ## 30. Testing
 
