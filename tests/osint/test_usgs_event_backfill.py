@@ -5,6 +5,13 @@ from uuid import uuid4
 from backend.app.osint.usgs.event_backfill import backfill_usgs_events
 
 
+def _mock_connection(cursor):
+    connection = MagicMock()
+    connection.__enter__.return_value = connection
+    connection.cursor.return_value.__enter__.return_value = cursor
+    return connection
+
+
 def test_backfill_usgs_events_resolves_pending_evidence(monkeypatch):
     evidence_id = uuid4()
     source_id = uuid4()
@@ -30,13 +37,10 @@ def test_backfill_usgs_events_resolves_pending_evidence(monkeypatch):
         )
     ]
 
-    connection = MagicMock()
-    connection.cursor.return_value.__enter__.return_value = cursor
-
-    get_connection = MagicMock(return_value=connection)
+    connection = _mock_connection(cursor)
     monkeypatch.setattr(
         "backend.app.osint.usgs.event_backfill.get_connection",
-        get_connection,
+        MagicMock(return_value=connection),
     )
 
     resolve = MagicMock(return_value=uuid4())
@@ -61,13 +65,10 @@ def test_backfill_usgs_events_is_empty_when_no_pending_evidence(monkeypatch):
     cursor = MagicMock()
     cursor.fetchall.return_value = []
 
-    connection = MagicMock()
-    connection.cursor.return_value.__enter__.return_value = cursor
-
-    get_connection = MagicMock(return_value=connection)
+    connection = _mock_connection(cursor)
     monkeypatch.setattr(
         "backend.app.osint.usgs.event_backfill.get_connection",
-        get_connection,
+        MagicMock(return_value=connection),
     )
 
     resolve = MagicMock()
