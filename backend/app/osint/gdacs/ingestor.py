@@ -6,21 +6,20 @@ from typing import Any
 from psycopg.types.json import Jsonb
 
 from backend.app.db import get_connection
-from backend.app.osint.common.evidence_persistence import (
-    upsert_evidence,
-)
-from backend.app.osint.gdacs.claim_builder import (
-    build_gdacs_claim,
-)
 from backend.app.osint.common.claim_persistence import (
     _persist_claim,
 )
-from backend.app.osint.gdacs.client import (
-    fetch_gdacs_events,
+from backend.app.osint.common.evidence_persistence import (
+    upsert_evidence,
 )
+from backend.app.osint.gdacs.claim_builder import build_gdacs_claim
+from backend.app.osint.gdacs.client import fetch_gdacs_events
 from backend.app.osint.gdacs.normalizer import (
     GDACSEarthquake,
     normalize_gdacs_feed,
+)
+from backend.app.services.event_resolution import (
+    resolve_evidence_event,
 )
 
 
@@ -106,24 +105,16 @@ def _get_or_create_source(cur: Any) -> str:
         """,
         {
             **GDACS_SOURCE_CONFIG,
-            "coverage": _json_value(
-                GDACS_SOURCE_CONFIG["coverage"]
-            ),
-            "roles": _json_value(
-                GDACS_SOURCE_CONFIG["roles"]
-            ),
-            "expertise": _json_value(
-                GDACS_SOURCE_CONFIG["expertise"]
-            ),
+            "coverage": _json_value(GDACS_SOURCE_CONFIG["coverage"]),
+            "roles": _json_value(GDACS_SOURCE_CONFIG["roles"]),
+            "expertise": _json_value(GDACS_SOURCE_CONFIG["expertise"]),
         },
     )
 
     return str(cur.fetchone()[0])
 
 
-def _build_structured_data(
-    earthquake: GDACSEarthquake,
-) -> Jsonb:
+def _build_structured_data(earthquake: GDACSEarthquake) -> Jsonb:
     return Jsonb(
         {
             "provider": "GDACS",
@@ -163,16 +154,10 @@ def _upsert_evidence(
     earthquake: GDACSEarthquake,
     retrieved_at: datetime,
 ) -> str:
-    external_id = (
-        f"{earthquake.event_id}:"
-        f"{earthquake.episode_id or 'none'}"
-    )
-
     title = (
         earthquake.event_name
         or (
-            f"Earthquake in "
-            f"{earthquake.country}"
+            f"Earthquake in {earthquake.country}"
             if earthquake.country
             else "GDACS earthquake alert"
         )
@@ -182,14 +167,12 @@ def _upsert_evidence(
         cur,
         {
             "source_id": source_id,
-            "external_id": external_id,
+            "external_id": earthquake.event_id,
+            "external_episode_id": earthquake.episode_id,
             "published_at": earthquake.event_time,
             "retrieved_at": retrieved_at,
             "title": title,
-            "url": (
-                earthquake.report_url
-                or earthquake.details_url
-            ),
+            "url": earthquake.report_url or earthquake.details_url,
             "content_type": "application/geo+json",
             "evidence_type": "alert",
             "source_role": "detection",
@@ -197,9 +180,7 @@ def _upsert_evidence(
             "evidence_quality": 90.0,
             "first_seen_at": retrieved_at,
             "last_seen_at": retrieved_at,
-            "structured_data": _build_structured_data(
-                earthquake
-            ),
+            "structured_data": _build_structured_data(earthquake),
         },
     )
 
@@ -214,8 +195,7 @@ def ingest_gdacs(
     if payload is None:
         if from_date is None or to_date is None:
             raise ValueError(
-                "from_date and to_date are required "
-                "when payload is not provided"
+                "from_date and to_date are required when payload is not provided"
             )
 
         payload = fetch_gdacs_events(
@@ -224,13 +204,8 @@ def ingest_gdacs(
             event_type=event_type,
         )
 
-    earthquakes = normalize_gdacs_feed(
-        payload
-    )
-
-    retrieved_at = datetime.now(
-        timezone.utc
-    )
+    earthquakes = normalize_gdacs_feed(payload)
+    retrieved_at = datetime.now(timezone.utc)
 
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -244,14 +219,44 @@ def ingest_gdacs(
                     retrieved_at,
                 )
 
-                claim = build_gdacs_claim(
-                    earthquake
-                )
+                claim = build_gdacs_claim(earthquake)
+                _persist_claim(cur, evidence_id, claim)
 
-                _persist_claim(
+                resolve_evidence_event(
                     cur,
-                    evidence_id,
-                    claim,
+                    evidence_id=evidence_id,
+                    source_id=source_id,
+                    source_name=GDACS_SOURCE_NAME,
+                    external_event_id=earthquake.event_id,
+                    title=(
+                        earthquake.event_name
+                        or (
+                            f"Earthquake in {earthquake.country}"
+                            if earthquake.country
+                            else "GDACS earthquake alert"
+                        )
+                    ),
+                    summary=claim.statement,
+                    subtype="earthquake",
+                    time_start=earthquake.event_time,
+                    latitude=earthquake.latitude,
+                    longitude=earthquake.longitude,
+                    country_iso3=earthquake.country_iso3,
+                    canonical_data={
+                        "provider": "GDACS",
+                        "external_event_id": earthquake.event_id,
+                        "external_episode_id": earthquake.episode_id,
+                        "event_type": earthquake.event_type,
+                        "alert_level": earthquake.alert_level,
+                        "alert_score": earthquake.alert_score,
+                        "event_name": earthquake.event_name,
+                        "country": earthquake.country,
+                        "country_iso3": earthquake.country_iso3,
+                        "latitude": earthquake.latitude,
+                        "longitude": earthquake.longitude,
+                        "magnitude": earthquake.magnitude,
+                        "depth": earthquake.depth,
+                    },
                 )
 
         conn.commit()
