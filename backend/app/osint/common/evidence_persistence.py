@@ -17,6 +17,7 @@ def upsert_evidence(
         INSERT INTO evidence (
             source_id,
             external_id,
+            external_episode_id,
             published_at,
             retrieved_at,
             title,
@@ -33,6 +34,7 @@ def upsert_evidence(
         VALUES (
             %(source_id)s,
             %(external_id)s,
+            %(external_episode_id)s,
             %(published_at)s,
             %(retrieved_at)s,
             %(title)s,
@@ -46,7 +48,11 @@ def upsert_evidence(
             %(last_seen_at)s,
             %(structured_data)s
         )
-        ON CONFLICT (source_id, external_id)
+        ON CONFLICT (
+            source_id,
+            external_id,
+            (COALESCE(external_episode_id, ''))
+        )
         DO UPDATE SET
             published_at = EXCLUDED.published_at,
             retrieved_at = EXCLUDED.retrieved_at,
