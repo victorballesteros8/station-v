@@ -1272,11 +1272,6 @@ A = mean(T1)
 
 donde se utilizarán los Country Risk de los países Tier 1 disponibles.
 
-Si no existe ningún Country Risk válido para Tier 1, la presión Tier 1 será 0.
-
-La ausencia de un snapshot válido se interpretará como ausencia de información,
-no como Country Risk = 0.
-
 Este componente representa el nivel medio de riesgo existente dentro del núcleo sistémico.
 
 ### 23.5 Amplitud del deterioro Tier 1
@@ -1291,33 +1286,21 @@ Esto permitirá diferenciar entre una situación de riesgo concentrada en una ú
 
 ### 23.6 Presión Tier 2
 
-La presión Tier 2 se calculará utilizando los ocho países Tier 2 con mayor Country Risk disponibles:
+La presión Tier 2 se calculará utilizando los ocho países Tier 2 con mayor Country Risk:
 
 ```text
-T2 = mean(Top8 T2 disponibles)
+T2 = mean(Top8 T2)
 ```
-
-Si existen menos de ocho países Tier 2 con Country Risk disponible, se utilizarán únicamente los países disponibles.
-
-No se imputará un Country Risk de 0 a los países que no dispongan de un snapshot válido.
-
-Si no existe ningún Country Risk válido para Tier 2, la presión Tier 2 será 0.
 
 La clasificación interna de Tier 2 podrá distinguir entre T2-A, T2-B y T2-Strategic, pero estas categorías no utilizarán fórmulas diferentes en el cálculo del Global Risk V1.
 
 ### 23.7 Presión Tier 3
 
-La presión Tier 3 se calculará utilizando los diez países Tier 3 con mayor Country Risk disponibles:
+La presión Tier 3 se calculará utilizando los diez países Tier 3 con mayor Country Risk:
 
 ```text
-T3 = mean(Top10 T3 disponibles)
+T3 = mean(Top10 T3)
 ```
-
-Si existen menos de diez países Tier 3 con Country Risk disponible, se utilizarán únicamente los países disponibles.
-
-No se imputará un Country Risk de 0 a los países que no dispongan de un snapshot válido.
-
-Si no existe ningún Country Risk válido para Tier 3, la presión Tier 3 será 0.
 
 La contribución de Tier 3 será deliberadamente limitada para evitar que un elevado número de crisis regionales de países con menor importancia sistémica domine el indicador.
 
@@ -1347,71 +1330,7 @@ No será:
 
 El indicador utilizará los Country Risk como información de entrada, pero incorporará la importancia sistémica estructural de cada país mediante su clasificación por Tier.
 
-### 23.10 Cobertura y estado de disponibilidad
-
-El Global Risk podrá calcularse aunque no exista información de Country Risk
-para todos los países del universo STATION V.
-
-La ausencia de un snapshot válido no se interpretará como Country Risk = 0.
-Los países sin información válida quedarán excluidos del cálculo, de acuerdo
-con las reglas definidas para cada Tier.
-
-Para evaluar la representatividad del indicador se calcularán dos métricas:
-
-```
-Cobertura global =
-países con Country Risk válido / total de países del universo STATION V
-```
-
-```
-Cobertura sistémica =
-países Tier 1 y Tier 2 con Country Risk válido /
-total de países Tier 1 y Tier 2
-```
-
-La cobertura no modificará matemáticamente el valor del Global Risk.
-Se utilizará exclusivamente como indicador de disponibilidad y
-representatividad de los datos.
-
-El estado de cobertura se clasificará de la siguiente forma:
-
-```
-INSUFICIENTE
-Cobertura global < 25 %
-o
-Cobertura sistémica < 50 %
-```
-
-```
-PROVISIONAL
-
-Cobertura global >= 25 %
-y
-Cobertura sistémica >= 50 %
-
-pero no se cumplen simultáneamente los criterios de estado OPERATIVO.
-```
-
-```
-OPERATIVO
-
-Cobertura global >= 60 %
-y
-Cobertura sistémica >= 80 %
-```
-
-Cuando el estado sea INSUFICIENTE o PROVISIONAL, el frontend podrá mostrar
-un indicador visual asociado al panel de Global Risk para advertir de la
-limitación de cobertura.
-
-El estado OPERATIVO no requerirá un indicador visual adicional.
-
-La cobertura constituye un metadato de calidad y representatividad del
-indicador y no debe confundirse con el nivel de riesgo expresado por
-Global Risk.
-
-
-### 23.11 Interdependencia
+### 23.10 Interdependencia
 
 La V1 no incorporará todavía una medida explícita de interdependencia o contagio entre países.
 
@@ -1693,6 +1612,162 @@ La ingestión automática queda fuera del primer MVP.
 La arquitectura reservará una capa independiente para su futura implementación.
 
 Posteriormente se podrán incorporar fuentes T0–T4.
+
+### 29.1 Principio de coste V1
+
+La implementación OSINT de V1 deberá poder ejecutarse con un coste de licencias y acceso a fuentes de **0 €**.
+
+No se incorporarán como dependencias obligatorias de la ingestión V1 fuentes que requieran:
+
+- suscripción de pago;
+- licencia de datos de pago;
+- licencia específica para automatización o redistribución;
+- acceso empresarial de pago;
+- infraestructura externa de pago necesaria para su funcionamiento.
+
+La ausencia de coste no sustituye la evaluación de las condiciones de uso, licencias, límites técnicos y permisos de cada fuente.
+
+### 29.2 Matriz inicial de fuentes OSINT
+
+La primera capa OSINT de STATION V se construirá sobre una combinación de fuentes estructuradas, académicas, institucionales y de descubrimiento.
+
+Fuentes piloto iniciales:
+
+```text
+USGS
+GDACS
+GDELT
+```
+
+Su función inicial será deliberadamente diferente:
+
+```text
+USGS
+Fuente estructurada de evidencia.
+Especialización inicial: actividad sísmica y terremotos.
+
+GDACS
+Fuente estructurada de alertas y contexto sobre desastres.
+Especialización inicial: terremotos, ciclones, inundaciones y otras
+emergencias de alcance internacional.
+
+GDELT
+Fuente secundaria de descubrimiento y monitorización de información.
+No se considerará por sí misma evidencia suficiente para convertir
+automáticamente una noticia o mención en un EVENT.
+```
+
+Estas tres fuentes se utilizarán inicialmente para validar el circuito de ingestión y tratamiento OSINT:
+
+```text
+SOURCE
+
+↓
+
+EVIDENCE
+
+↓
+
+CLAIM
+
+↓
+
+EVENT
+```
+
+La incorporación de una fuente al sistema no implica que todos sus datos generen automáticamente acontecimientos. La función de cada fuente deberá quedar registrada y respetar su capacidad de detección, corroboración, contexto y datos cuantitativos.
+
+### 29.3 Fuentes previstas para fases posteriores
+
+Una vez validado el pipeline con las fuentes piloto, podrán incorporarse:
+
+```text
+UCDP
+ReliefWeb / OCHA
+NASA FIRMS
+Fuentes oficiales gubernamentales
+Organismos internacionales
+```
+
+Estas fuentes tendrán funciones complementarias:
+
+```text
+UCDP
+Datos académicos sobre conflicto armado y violencia organizada.
+
+ReliefWeb / OCHA
+Crisis humanitarias, emergencias y contexto operacional.
+
+NASA FIRMS
+Observaciones satelitales de actividad térmica e incendios.
+Los hotspots no se interpretarán automáticamente como EVENT.
+
+Fuentes oficiales gubernamentales
+Evidencia primaria sobre decisiones, declaraciones, alertas,
+actividad estatal y acontecimientos oficiales.
+
+Organismos internacionales
+Evidencia primaria o institucional sobre crisis, decisiones,
+operaciones, alertas y acontecimientos internacionales.
+```
+
+### 29.4 Medios de comunicación y fuentes de descubrimiento
+
+Medios internacionales de alta calidad, como Reuters, podrán utilizarse como fuentes de descubrimiento o corroboración cuando exista acceso público y permitido para el uso concreto.
+
+Reuters no será una dependencia obligatoria del pipeline automatizado de V1 ni se almacenará sistemáticamente su contenido salvo que las condiciones de uso aplicables lo permitan.
+
+La arquitectura no dependerá de un único medio de comunicación.
+
+La utilización de una fuente de descubrimiento no implicará que el contenido publicado por dicha fuente pueda copiarse, redistribuirse o almacenarse íntegramente. Se conservarán únicamente los elementos necesarios para la trazabilidad y el funcionamiento del modelo, de acuerdo con las condiciones de uso aplicables.
+
+### 29.5 Criterios de incorporación
+
+Antes de incorporar una nueva fuente al pipeline OSINT se evaluará:
+
+- coste;
+- licencia y condiciones de uso;
+- método de acceso;
+- estabilidad del acceso;
+- límites de consulta;
+- cobertura geográfica;
+- cobertura temporal;
+- capacidad de detección;
+- capacidad de corroboración;
+- calidad de los datos;
+- independencia respecto de otras fuentes;
+- posibilidad de mantener trazabilidad hacia la fuente original.
+
+La matriz de fuentes será un componente de arquitectura y no una simple lista de URLs.
+
+Cada fuente deberá tener una función definida dentro del modelo `SOURCE → EVIDENCE → CLAIM → EVENT`.
+
+### 29.6 Estrategia de implementación
+
+No se implementarán todas las fuentes simultáneamente.
+
+La primera iteración OSINT se centrará en:
+
+```text
+USGS
+GDACS
+GDELT
+```
+
+El objetivo será demostrar que el sistema puede:
+
+1. consultar una fuente;
+2. normalizar su información;
+3. registrar la fuente y la evidencia;
+4. evitar duplicados;
+5. asociar países y localizaciones cuando proceda;
+6. mantener trazabilidad;
+7. diferenciar detección de corroboración;
+8. generar o actualizar EVENT de forma controlada.
+
+Una vez validado este circuito, se incorporarán progresivamente las fuentes restantes.
+
+La incorporación de nuevas fuentes no deberá exigir modificar el núcleo conceptual de `SOURCE`, `EVIDENCE`, `CLAIM` y `EVENT`.
 
 ## 30. Docker
 
