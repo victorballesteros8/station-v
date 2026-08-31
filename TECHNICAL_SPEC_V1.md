@@ -189,6 +189,10 @@ CLAIM
 
    ↓
 
+EVENT RESOLUTION
+
+   ↓
+
 EVENT
 
    ↓
@@ -524,6 +528,117 @@ Los cambios relevantes del evento generarán nuevas versiones.
 
 Las versiones mantendrán un histórico.
 
+### 13.8 Resolución de EVENT
+
+La asociación entre EVIDENCE y EVENT será una fase explícita del pipeline. La existencia de una Evidence no implicará automáticamente la creación de un nuevo EVENT.
+
+El flujo conceptual será:
+
+```text
+SOURCE
+  ↓
+EVIDENCE
+  ↓
+CLAIM
+  ↓
+EVENT RESOLUTION
+  ├── asociar a EVENT existente
+  ├── crear nuevo EVENT
+  └── mantener EVIDENCE sin EVENT
+```
+
+`event_id` podrá permanecer `NULL` en una Evidence cuando todavía no exista una correspondencia suficientemente fiable con un acontecimiento estructurado.
+
+Esto permitirá conservar evidencia de detección, contexto o descubrimiento sin convertir cada registro recibido en un acontecimiento independiente.
+
+### 13.9 Principio de unicidad del acontecimiento
+
+Cuando varias Evidence describan el mismo hecho subyacente, deberán asociarse al mismo EVENT siempre que exista una correspondencia suficientemente fiable.
+
+La unidad conceptual será:
+
+```text
+1 acontecimiento real
+        ↓
+     1 EVENT
+        ↓
+ múltiples EVIDENCE
+```
+
+No se creará un EVENT independiente por cada noticia, alerta, observación o fuente que describa el mismo acontecimiento.
+
+### 13.10 Resolución de correspondencia
+
+La resolución de EVENT utilizará primero identificadores y atributos estructurados disponibles en las fuentes y, posteriormente, criterios de correspondencia sobre el acontecimiento.
+
+Los criterios V1 podrán incluir:
+
+- identificador externo del acontecimiento proporcionado por la fuente;
+- categoría y subtipo;
+- fecha/hora del acontecimiento;
+- localización y proximidad geográfica;
+- país o países afectados;
+- atributos cuantitativos específicos del fenómeno cuando existan;
+- similitud estructural entre los datos normalizados.
+
+Los identificadores externos serán considerados identificadores de la fuente de origen y no sustituirán al `event_id` interno de STATION V.
+
+La coincidencia por identificador externo tendrá prioridad cuando dicho identificador sea estable y esté correctamente asociado a la fuente.
+
+### 13.11 Reglas de creación
+
+Un nuevo EVENT podrá crearse automáticamente cuando la evidencia disponga de información estructurada suficiente para identificar un acontecimiento concreto y supere las reglas de creación definidas para su tipo de fuente.
+
+Las fuentes de descubrimiento o monitorización general no generarán automáticamente un EVENT únicamente por detectar una mención o noticia.
+
+En V1 se priorizará la precisión sobre la cobertura: ante una correspondencia ambigua, la Evidence podrá permanecer sin EVENT en lugar de crear un acontecimiento potencialmente duplicado o incorrecto.
+
+### 13.12 Idempotencia y actualización
+
+La ingestión deberá ser idempotente respecto de la misma Evidence y de los identificadores externos conocidos.
+
+La recepción repetida de una misma observación no deberá crear nuevos EVENT ni nuevas entidades equivalentes.
+
+Cuando una nueva Evidence corresponda a un EVENT existente, se añadirá como nueva evidencia del mismo acontecimiento y, cuando proceda, podrá provocar una actualización de su versión actual.
+
+La llegada de nueva Evidence no implicará por sí misma una nueva versión si no modifica materialmente el estado, los atributos o la valoración del EVENT.
+
+### 13.13 Evidencia sin EVENT
+
+Las Evidence sin `event_id` no deberán considerarse registros erróneos por defecto.
+
+Pueden representar:
+
+- detecciones pendientes de resolución;
+- contexto que todavía no puede asociarse con suficiente precisión;
+- información de descubrimiento;
+- datos que no alcanzan el umbral necesario para constituir un EVENT;
+- información cuya correspondencia con un EVENT existente es ambigua.
+
+La implementación deberá permitir que estas Evidence permanezcan trazables y puedan asociarse posteriormente a un EVENT sin duplicar la evidencia original.
+
+### 13.14 Corroboración y visibilidad
+
+La resolución de EVENT y la visibilidad del EVENT serán conceptos distintos.
+
+Un EVENT puede existir en la base de datos sin aparecer en el mapa. La visualización dependerá de los criterios operativos definidos para severidad, corroboración, calidad de evidencia y demás reglas de presentación.
+
+Por tanto:
+
+```text
+Evidence
+   ↓
+Event Resolution
+   ↓
+EVENT
+   ↓
+Corroboration / Presentation Rules
+   ↓
+Visible en mapa o dashboard
+```
+
+La creación de un EVENT no equivale automáticamente a su publicación como acontecimiento relevante para el usuario.
+
 ## 14. Evidence
 
 ```text
@@ -553,6 +668,8 @@ first_seen_at
 last_seen_at
 content_hash
 ```
+
+`event_id` podrá ser `NULL` cuando la Evidence todavía no haya sido asociada de forma suficientemente fiable a un EVENT.
 
 Tipos iniciales:
 
