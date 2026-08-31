@@ -11,6 +11,7 @@ from backend.app.scoring.risk_service import (
     _load_risk_impacts,
     _load_subindicators,
     calculate_country_risk_snapshot,
+    _get_global_risk_coverage_status
 )
 
 
@@ -781,3 +782,26 @@ def test_country_risk_snapshot_is_deterministic_for_same_reference_time():
     assert second_result.country_risk == pytest.approx(
         first_result.country_risk
     )
+
+def test_global_risk_coverage_status_insufficient_global():
+    assert _get_global_risk_coverage_status(24.99, 100.0) == "insufficient"
+
+
+def test_global_risk_coverage_status_insufficient_systemic():
+    assert _get_global_risk_coverage_status(100.0, 49.99) == "insufficient"
+
+
+def test_global_risk_coverage_status_provisional_at_lower_boundary():
+    assert _get_global_risk_coverage_status(25.0, 50.0) == "provisional"
+
+
+def test_global_risk_coverage_status_provisional_below_operational():
+    assert _get_global_risk_coverage_status(59.99, 80.0) == "provisional"
+
+
+def test_global_risk_coverage_status_operational_at_boundary():
+    assert _get_global_risk_coverage_status(60.0, 80.0) == "operational"
+
+
+def test_global_risk_coverage_status_operational_above_boundaries():
+    assert _get_global_risk_coverage_status(100.0, 100.0) == "operational"

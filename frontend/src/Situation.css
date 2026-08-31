@@ -105,6 +105,68 @@
   white-space: nowrap;
 }
 
+.situation-country-row {
+  min-width: 0;
+}
+
+.situation-country-score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.situation-risk-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+
+  border-radius: 50%;
+}
+
+.situation-risk-dot.low,
+.situation-risk-bar-fill.low {
+  background: #4d8fd1;
+}
+
+.situation-risk-dot.moderate,
+.situation-risk-bar-fill.moderate {
+  background: #5fa87a;
+}
+
+.situation-risk-dot.elevated,
+.situation-risk-bar-fill.elevated {
+  background: #d8b94a;
+}
+
+.situation-risk-dot.high,
+.situation-risk-bar-fill.high {
+  background: #e58b3a;
+}
+
+.situation-risk-dot.critical,
+.situation-risk-bar-fill.critical {
+  background: #d94a4a;
+}
+
+.situation-risk-bar {
+  width: 100%;
+  height: 4px;
+
+  margin-top: 2px;
+
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.situation-risk-bar-fill {
+  height: 100%;
+  min-width: 0;
+
+  border-radius: 2px;
+}
+
 /* País */
 
 .situation-country {
@@ -319,11 +381,32 @@
 /* Riesgo global */
 
 .situation-global-risk {
+  position: relative;
+
   min-height: 110px;
 
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.situation-global-risk-status {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+
+  width: 9px;
+  height: 9px;
+
+  border-radius: 50%;
+}
+
+.situation-global-risk-status.insufficient {
+  background: #d94a4a;
+}
+
+.situation-global-risk-status.provisional {
+  background: #d8b94a;
 }
 
 .situation-global-risk strong {
@@ -525,6 +608,16 @@
   .country-name {
     font-size: 13px;
   }
+
+  .situation-risk-dot {
+    width: 6px;
+    height: 6px;
+    flex-basis: 6px;
+  }
+
+  .situation-risk-bar {
+    height: 3px;
+  }
 }
 
 .situation-event-status-icon {
@@ -564,4 +657,18 @@
     width: 14px;
     font-size: 11px;
   }
+}
+
+.situation-trend-positive,
+.situation-trend-negative {
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+.situation-trend-positive {
+  color: #d94a4a;
+}
+
+.situation-trend-negative {
+  color: #5fa87a;
 }

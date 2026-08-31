@@ -6,6 +6,7 @@ import {
   getSituation,
   type SituationCountry,
   type SituationEvent,
+  type SituationResponse,
 } from "./api/situation"
 
 import { formatSeverity } from "./utils/labels"
@@ -31,14 +32,34 @@ function formatTrend(value: number | null): string {
 
 function getStatusIcon(status: string): string {
   const icons: Record<string, string> = {
-    emerging: "✨",
-    active: "⚿",
-    stable: "≡",
-    decreasing: "↘",
-    finished: "✓",
+    emerging: "📈",
+    active: "🔔",
+    stable: "⏳",
+    decreasing: "📉",
+    finished: "✅",
   }
 
   return icons[status] ?? "•"
+}
+
+function getRiskLevel(value: number): string {
+  if (value < 20) {
+    return "low"
+  }
+
+  if (value < 40) {
+    return "moderate"
+  }
+
+  if (value < 60) {
+    return "elevated"
+  }
+
+  if (value < 80) {
+    return "high"
+  }
+
+  return "critical"
 }
 
 function CountryRow({
@@ -55,41 +76,65 @@ function CountryRow({
       ? country.country_risk - country.trend
       : country.country_risk
 
-  return (
-    <div className="situation-row">
-      <button
-        type="button"
-        className="situation-country"
-        onClick={() => onSelect(country.country_id)}
-      >
-        <CountryIdentity
-          iso2={country.iso2}
-          name={country.name}
-        />
-      </button>
+  const riskLevel = getRiskLevel(country.country_risk)
 
-      <strong>
-        {showTrend ? (
-          <>
-            {formatScore(previousRisk)}{" "}
-            <span
-              style={{
-                fontSize: "0.8em",
-                fontWeight: 500,
-                color:
+  return (
+    <div className="situation-country-row">
+      <div className="situation-row">
+        <button
+          type="button"
+          className="situation-country"
+          onClick={() => onSelect(country.country_id)}
+        >
+          <CountryIdentity
+            iso2={country.iso2}
+            name={country.name}
+          />
+        </button>
+
+        <strong className="situation-country-score">
+          {showTrend ? (
+            <>
+              {formatScore(previousRisk)}{" "}
+              <span
+                className={
                   country.trend !== null &&
                   country.trend > 0
-                    ? "#d94a4a"
-                    : "#5fa87a",
-              }}
-            >
-              {formatTrend(country.trend)}
-            </span>
-          </>
-        ) : (
-          formatScore(country.country_risk)
-        )}
-      </strong>
+                    ? "situation-trend-positive"
+                    : "situation-trend-negative"
+                }
+              >
+                {formatTrend(country.trend)}
+              </span>
+            </>
+          ) : (
+            <>
+              <span
+                className={`situation-risk-dot ${riskLevel}`}
+                aria-hidden="true"
+              />
+              {formatScore(country.country_risk)}
+            </>
+          )}
+        </strong>
+      </div>
+
+      {!showTrend && (
+        <div
+          className="situation-risk-bar"
+          aria-hidden="true"
+        >
+          <div
+            className={`situation-risk-bar-fill ${riskLevel}`}
+            style={{
+              width: `${Math.min(
+                Math.max(country.country_risk, 0),
+                100,
+              )}%`,
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -171,6 +216,9 @@ function Situation({
   const [error, setError] =
     useState<string | null>(null)
 
+  const [globalRisk, setGlobalRisk] =
+    useState<SituationResponse["global_risk"] | null>(null)
+
   useEffect(() => {
     async function loadSituation() {
       try {
@@ -180,6 +228,7 @@ function Situation({
         setDeterioration(data.deterioration_24h)
         setImprovement(data.improvement_24h)
         setEvents(data.relevant_events)
+        setGlobalRisk(data.global_risk)
       } catch (err) {
         setError(
           err instanceof Error
@@ -221,7 +270,29 @@ function Situation({
           <h3>Riesgo global</h3>
 
           <div className="situation-global-risk">
-            <strong>—</strong>
+            {globalRisk && (
+              <>
+                {globalRisk.coverage_status !== "operational" && (
+                  <span
+                    className={`situation-global-risk-status ${globalRisk.coverage_status}`}
+                    title={
+                      globalRisk.coverage_status === "insufficient"
+                        ? "Datos insuficientes"
+                        : "Datos incompletos"
+                    }
+                    aria-label={
+                      globalRisk.coverage_status === "insufficient"
+                        ? "Datos insuficientes"
+                        : "Datos incompletos"
+                    }
+                  />
+                )}
+
+                <strong>
+                  {formatScore(globalRisk.value)}
+                </strong>
+              </>
+            )}
           </div>
         </section>
 

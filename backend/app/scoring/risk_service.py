@@ -15,6 +15,12 @@ from .risk_engine import (
     calculate_subindicator_score,
 )
 
+from .global_risk_engine import (
+    calculate_global_risk,
+    calculate_tier_1_components,
+    calculate_tier_2_pressure,
+    calculate_tier_3_pressure,
+)
 
 @dataclass(frozen=True)
 class CountryRiskResult:
@@ -27,6 +33,21 @@ class CountryRiskResult:
     pressure_stress: float
     confidence: str
 
+@dataclass(frozen=True)
+class GlobalRiskResult:
+    global_risk: float
+    tier1_pressure: float
+    tier1_intensity: float
+    tier1_average: float
+    tier1_breadth: float
+    tier2_pressure: float
+    tier3_pressure: float
+    tier1_countries: int
+    tier2_countries: int
+    tier3_countries: int
+    coverage_global: float
+    coverage_systemic: float
+    coverage_status: str
 
 def _normalise_timestamp(timestamp: datetime) -> datetime:
     if timestamp.tzinfo is None:
@@ -473,4 +494,146 @@ def calculate_country_risk_snapshot(
         military_activity=military_activity,
         pressure_stress=pressure_stress,
         confidence=confidence,
+    )
+
+def _get_global_risk_coverage_status(
+    coverage_global: float,
+    coverage_systemic: float,
+) -> str:
+    if (
+        coverage_global >= 60.0
+        and coverage_systemic >= 80.0
+    ):
+        return "operational"
+
+    if (
+        coverage_global >= 25.0
+        and coverage_systemic >= 50.0
+    ):
+        return "provisional"
+
+    return "insufficient"
+
+def calculate_global_risk_snapshot(
+    *,
+    reference_time: datetime | None = None,
+) -> GlobalRiskResult:
+    """
+    Calculate Global Risk from the latest valid Country Risk snapshot
+    available for each country.
+
+    Countries without a valid snapshot are excluded from the calculation.
+    Missing data is never interpreted as Country Risk = 0.
+    """
+
+    if reference_time is None:
+        reference_time = datetime.now(timezone.utc)
+    else:
+        reference_time = _normalise_timestamp(reference_time)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+
+            cur.execute(
+                """
+                SELECT
+                    ct.tier,
+                    rs.country_risk
+                FROM country_tiers ct
+                LEFT JOIN LATERAL (
+                    SELECT country_risk
+                    FROM risk_snapshots
+                    WHERE country_id = ct.country_id
+                    AND timestamp <= %s
+                    AND country_risk IS NOT NULL
+                    ORDER BY timestamp DESC
+                    LIMIT 1
+                ) rs ON TRUE
+                ORDER BY ct.tier, rs.country_risk DESC NULLS LAST
+                """,
+                (reference_time,),
+            )
+
+            rows = cur.fetchall()
+
+    tier1_risks: list[float] = []
+    tier2_risks: list[float] = []
+    tier3_risks: list[float] = []
+
+    for tier, country_risk in rows:
+        if country_risk is None:
+            continue
+
+        value = float(country_risk)
+
+        if tier == 1:
+            tier1_risks.append(value)
+        elif tier == 2:
+            tier2_risks.append(value)
+        elif tier == 3:
+            tier3_risks.append(value)
+
+    tier1_total = sum(1 for tier, _ in rows if tier == 1)
+    tier2_total = sum(1 for tier, _ in rows if tier == 2)
+    tier3_total = sum(1 for tier, _ in rows if tier == 3)
+
+    total_countries = (
+        tier1_total
+        + tier2_total
+        + tier3_total
+    )
+
+    covered_countries = (
+        len(tier1_risks)
+        + len(tier2_risks)
+        + len(tier3_risks)
+    )
+
+    systemic_total = tier1_total + tier2_total
+    systemic_covered = (
+        len(tier1_risks)
+        + len(tier2_risks)
+    )
+
+    coverage_global = (
+        100.0 * covered_countries / total_countries
+        if total_countries
+        else 0.0
+    )
+
+    coverage_systemic = (
+        100.0 * systemic_covered / systemic_total
+        if systemic_total
+        else 0.0
+    )
+
+    coverage_status = _get_global_risk_coverage_status(
+        coverage_global,
+        coverage_systemic,
+    )
+
+    tier1 = calculate_tier_1_components(tier1_risks)
+    tier2 = calculate_tier_2_pressure(tier2_risks)
+    tier3 = calculate_tier_3_pressure(tier3_risks)
+
+    global_risk = calculate_global_risk(
+        tier_1_risks=tier1_risks,
+        tier_2_risks=tier2_risks,
+        tier_3_risks=tier3_risks,
+    )
+
+    return GlobalRiskResult(
+        global_risk=global_risk,
+        tier1_pressure=tier1.pressure,
+        tier1_intensity=tier1.intensity,
+        tier1_average=tier1.average,
+        tier1_breadth=tier1.breadth,
+        tier2_pressure=tier2,
+        tier3_pressure=tier3,
+        tier1_countries=len(tier1_risks),
+        tier2_countries=len(tier2_risks),
+        tier3_countries=len(tier3_risks),
+        coverage_global=coverage_global,
+        coverage_systemic=coverage_systemic,
+        coverage_status=coverage_status,
     )

@@ -178,8 +178,44 @@ def test_situation_returns_expected_structure():
         "deterioration_24h",
         "improvement_24h",
         "relevant_events",
+        "global_risk",
     }
 
+def test_situation_global_risk_has_expected_fields():
+    response = client.get("/api/v1/situation")
+
+    assert response.status_code == 200
+
+    data = response.json()
+    global_risk = data["global_risk"]
+
+    assert set(global_risk.keys()) == {
+        "value",
+        "coverage_global",
+        "coverage_systemic",
+        "coverage_status",
+    }
+
+    assert isinstance(
+        global_risk["value"],
+        (int, float),
+    )
+
+    assert isinstance(
+        global_risk["coverage_global"],
+        (int, float),
+    )
+
+    assert isinstance(
+        global_risk["coverage_systemic"],
+        (int, float),
+    )
+
+    assert global_risk["coverage_status"] in {
+        "insufficient",
+        "provisional",
+        "operational",
+    }
 
 def test_situation_country_lists_are_lists():
     response = client.get("/api/v1/situation")
@@ -477,3 +513,46 @@ def test_event_patch_preserves_unchanged_fields(test_event_id):
     assert after_data["escalation_score"] == (
         before_data["escalation_score"]
     )
+
+def test_global_risk_returns_expected_structure():
+    response = client.get(
+        "/api/risk/global"
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert set(data.keys()) == {
+        "global_risk",
+        "tier1_pressure",
+        "tier1_intensity",
+        "tier1_average",
+        "tier1_breadth",
+        "tier2_pressure",
+        "tier3_pressure",
+        "coverage_global",
+        "coverage_systemic",
+        "coverage_status",
+    }
+
+    assert isinstance(
+        data["global_risk"],
+        (int, float),
+    )
+
+    assert isinstance(
+        data["coverage_global"],
+        (int, float),
+    )
+
+    assert isinstance(
+        data["coverage_systemic"],
+        (int, float),
+    )
+
+    assert data["coverage_status"] in {
+        "insufficient",
+        "provisional",
+        "operational",
+    }

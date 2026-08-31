@@ -22,11 +22,22 @@ export interface SituationEvent {
   confidence: string
 }
 
+interface SituationGlobalRisk {
+  value: number
+  coverage_global: number
+  coverage_systemic: number
+  coverage_status:
+    | "insufficient"
+    | "provisional"
+    | "operational"
+}
+
 export interface SituationResponse {
   top_risk: SituationCountry[]
   deterioration_24h: SituationCountry[]
   improvement_24h: SituationCountry[]
   relevant_events: SituationEvent[]
+  global_risk: SituationGlobalRisk
 }
 
 const API_BASE_URL =

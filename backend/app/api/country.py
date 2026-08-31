@@ -64,6 +64,7 @@ def get_country(country_id: int):
                 """
                 SELECT DISTINCT ON (rs.subindicator_id)
                     rs.subindicator_id,
+                    si.dimension_id,
                     si.code,
                     si.name,
                     rs.score,
@@ -139,10 +140,11 @@ def get_country(country_id: int):
         "subindicators": [
             {
                 "id": int(row[0]),
-                "code": row[1],
-                "name": row[2],
-                "score": float(row[3]),
-                "timestamp": row[4],
+                "dimension_id": int(row[1]),
+                "code": row[2],
+                "name": row[3],
+                "score": float(row[4]),
+                "timestamp": row[5],
             }
             for row in subindicator_rows
         ],

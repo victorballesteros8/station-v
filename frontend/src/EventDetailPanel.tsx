@@ -117,11 +117,32 @@ function formatCountryName(iso2: string, name: string): string {
   return names[iso2.toUpperCase()] ?? name
 }
 
+function getEscalationClass(score: number): string {
+  if (score > 8) {
+    return "critical"
+  }
+
+  if (score > 6) {
+    return "high"
+  }
+
+  if (score > 3) {
+    return "moderate"
+  }
+
+  return "low"
+}
+
 function EventDetailPanel({
   event,
   onClose,
   onCountrySelect,
 }: EventDetailPanelProps) {
+  const escalationClass =
+    event.escalation_score !== null
+      ? getEscalationClass(event.escalation_score)
+      : null
+
   return (
     <aside className="event-detail-panel">
       <div className="event-detail-header">
@@ -146,22 +167,42 @@ function EventDetailPanel({
       </div>
 
       <div className="event-detail-meta">
-        <div>
+        <div className="event-detail-meta-status">
           <span>Estado</span>
           <strong>{formatStatus(event.status)}</strong>
         </div>
 
-        <div>
+        <div className="event-detail-meta-confidence">
           <span>Confianza</span>
           <strong>{formatConfidence(event.confidence)}</strong>
         </div>
 
         {event.escalation_score !== null && (
-          <div>
-            <span>Escalada</span>
-            <strong>
-              {event.escalation_score.toFixed(1)} / 10
-            </strong>
+          <div
+            className={`event-detail-meta-escalation ${escalationClass}`}
+          >
+            <div className="event-detail-escalation-header">
+              <span>Escalada</span>
+
+              <strong>
+                {event.escalation_score.toFixed(1)} / 10
+              </strong>
+            </div>
+
+            <div
+              className="event-detail-escalation-bar"
+              aria-label={`Escalada ${event.escalation_score.toFixed(1)} de 10`}
+            >
+              <div
+                className="event-detail-escalation-fill"
+                style={{
+                  width: `${Math.min(
+                    Math.max(event.escalation_score, 0),
+                    10,
+                  ) * 10}%`,
+                }}
+              />
+            </div>
           </div>
         )}
       </div>

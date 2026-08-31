@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import L from "leaflet"
 
 import type { EventMapItem } from "./api/events"
@@ -69,7 +69,7 @@ function getCategoryIcon(category: string): string {
       return "🚨"
 
     default:
-      return "●"
+      return "○"
   }
 }
 
@@ -101,77 +101,93 @@ function MapLegend({
 }: {
   visibleEvents: EventMapItem[]
 }) {
+  const [open, setOpen] = useState(false)
+
   const categories = Array.from(
     new Set(visibleEvents.map((event) => event.category)),
   )
 
   return (
-    <div className="map-legend">
-      <div className="map-legend-section">
-        <h3>Escalada</h3>
+    <>
+      <button
+        type="button"
+        className={`map-legend-toggle ${open ? "open" : ""}`}
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        aria-label="Mostrar u ocultar leyenda"
+      >
+        {open ? "OCULTAR LEYENDA" : "LEYENDA"}
+      </button>
 
-        <div className="map-legend-escalation">
-          <div className="map-legend-item">
-            <span
-              className="map-legend-dot"
-              style={{ backgroundColor: "#5fa87a" }}
-            />
-            <span>Baja</span>
-            <span className="map-legend-range">0–3</span>
-          </div>
-
-          <div className="map-legend-item">
-            <span
-              className="map-legend-dot"
-              style={{ backgroundColor: "#d8b94a" }}
-            />
-            <span>Moderada</span>
-            <span className="map-legend-range">&gt;3–6</span>
-          </div>
-
-          <div className="map-legend-item">
-            <span
-              className="map-legend-dot"
-              style={{ backgroundColor: "#e58b3a" }}
-            />
-            <span>Alta</span>
-            <span className="map-legend-range">&gt;6–8</span>
-          </div>
-
-          <div className="map-legend-item">
-            <span
-              className="map-legend-dot"
-              style={{ backgroundColor: "#d94a4a" }}
-            />
-            <span>Crítica</span>
-            <span className="map-legend-range">&gt;8–10</span>
-          </div>
-        </div>
-      </div>
-
-      {categories.length > 0 && (
+      <div
+        className={`map-legend ${open ? "map-legend-open" : ""}`}
+      >
         <div className="map-legend-section">
-          <h3>Categorías</h3>
+          <h3>Escalada</h3>
 
-          <div className="map-legend-categories">
-            {categories.map((category) => (
-              <div
-                className="map-legend-category"
-                key={category}
-              >
-                <span className="map-legend-category-icon">
-                  {getCategoryIcon(category)}
-                </span>
+          <div className="map-legend-escalation">
+            <div className="map-legend-item">
+              <span
+                className="map-legend-dot"
+                style={{ backgroundColor: "#5fa87a" }}
+              />
+              <span>Baja</span>
+              <span className="map-legend-range">0–3</span>
+            </div>
 
-                <span>
-                  {categoryLabels[category] ?? category}
-                </span>
-              </div>
-            ))}
+            <div className="map-legend-item">
+              <span
+                className="map-legend-dot"
+                style={{ backgroundColor: "#d8b94a" }}
+              />
+              <span>Moderada</span>
+              <span className="map-legend-range">&gt;3–6</span>
+            </div>
+
+            <div className="map-legend-item">
+              <span
+                className="map-legend-dot"
+                style={{ backgroundColor: "#e58b3a" }}
+              />
+              <span>Alta</span>
+              <span className="map-legend-range">&gt;6–8</span>
+            </div>
+
+            <div className="map-legend-item">
+              <span
+                className="map-legend-dot"
+                style={{ backgroundColor: "#d94a4a" }}
+              />
+              <span>Crítica</span>
+              <span className="map-legend-range">&gt;8–10</span>
+            </div>
           </div>
         </div>
-      )}
-    </div>
+
+        {categories.length > 0 && (
+          <div className="map-legend-section">
+            <h3>Categorías</h3>
+
+            <div className="map-legend-categories">
+              {categories.map((category) => (
+                <div
+                  className="map-legend-category"
+                  key={category}
+                >
+                  <span className="map-legend-category-icon">
+                    {getCategoryIcon(category)}
+                  </span>
+
+                  <span>
+                    {categoryLabels[category] ?? category}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   )
 }
 

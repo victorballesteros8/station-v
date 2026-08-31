@@ -6,6 +6,9 @@ from fastapi import APIRouter
 
 from backend.app.db import get_connection
 
+from backend.app.scoring.risk_service import (
+    calculate_global_risk_snapshot,
+)
 
 router = APIRouter(
     prefix="/api/v1/situation",
@@ -201,9 +204,16 @@ def get_situation():
 
             relevant_events = _get_relevant_events(cur)
 
+    global_risk = calculate_global_risk_snapshot()
     return {
         "top_risk": top_risk,
         "deterioration_24h": deterioration,
         "improvement_24h": improvement,
         "relevant_events": relevant_events,
+        "global_risk": {
+            "value": global_risk.global_risk,
+            "coverage_global": global_risk.coverage_global,
+            "coverage_systemic": global_risk.coverage_systemic,
+            "coverage_status": global_risk.coverage_status,
+        },
     }

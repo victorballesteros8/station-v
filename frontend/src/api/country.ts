@@ -20,6 +20,7 @@ export interface CountryData {
 
   subindicators: {
     id: number
+    dimension_id: number
     code: string
     name: string
     score: number
