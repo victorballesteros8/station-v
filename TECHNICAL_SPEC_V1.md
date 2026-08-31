@@ -639,6 +639,113 @@ Visible en mapa o dashboard
 
 La creación de un EVENT no equivale automáticamente a su publicación como acontecimiento relevante para el usuario.
 
+### 13.15 Identidad externa y resolución específica de fuentes
+
+Las fuentes estructuradas que proporcionen un identificador propio deberán conservar dicho identificador de forma explícita en la capa de Evidence. El identificador externo pertenece al registro de la fuente y no reemplaza al identificador interno `event_id` de STATION V.
+
+La implementación V1 deberá distinguir entre:
+
+```text
+Identidad de fuente
+        ↓
+external_event_id
+
+Identidad STATION V
+        ↓
+event_id
+```
+
+Cuando una fuente proporcione además un identificador de actualización, episodio o evaluación, este deberá conservarse como atributo separado y no utilizarse para crear automáticamente un nuevo EVENT.
+
+### 13.16 Regla específica USGS
+
+Para USGS, el identificador de evento proporcionado por el catálogo será la identidad primaria del acontecimiento dentro de la fuente.
+
+Conceptualmente:
+
+```text
+SOURCE = USGS
+external_event_id = USGS event ID
+```
+
+Las actualizaciones posteriores del mismo terremoto deberán resolverse contra el mismo `external_event_id` y, por tanto, contra el mismo EVENT de STATION V cuando ya exista asociación.
+
+Los cambios posteriores de magnitud, localización, hora u otros atributos del terremoto no deberán crear automáticamente un nuevo EVENT si el identificador USGS permanece estable.
+
+La Evidence de USGS deberá conservar los datos de la observación recibida y su `retrieved_at`, de forma que la evolución del dato pueda distinguirse del acontecimiento subyacente.
+
+### 13.17 Regla específica GDACS
+
+Para GDACS, el `eventid` identifica el acontecimiento GDACS y el `episodeid` identifica una evaluación o actualización concreta del mismo acontecimiento.
+
+Conceptualmente:
+
+```text
+SOURCE = GDACS
+external_event_id = GDACS eventid
+external_episode_id = GDACS episodeid
+```
+
+Un nuevo `episodeid` no deberá generar automáticamente un nuevo EVENT de STATION V. Las diferentes evaluaciones de un mismo `eventid` deberán conservarse como evidencia/actualización trazable del mismo acontecimiento.
+
+En terremotos, cuando GDACS proporcione una referencia al evento de NEIC/USGS, dicha referencia deberá conservarse como identificador externo de la fuente relacionada y utilizarse como vínculo determinista entre ambas fuentes.
+
+Conceptualmente:
+
+```text
+GDACS eventid
+      ↓
+referencia NEIC/USGS
+      ↓
+USGS external_event_id
+      ↓
+EVENT STATION V común
+```
+
+Cuando exista esta referencia directa, tendrá prioridad sobre cualquier matching heurístico por tiempo, distancia o magnitud.
+
+### 13.18 Resolución cross-source de fallback
+
+Cuando no exista un identificador externo cruzable entre dos fuentes, podrá utilizarse una resolución secundaria basada en atributos del acontecimiento.
+
+Para V1, este mecanismo será conservador y podrá considerar conjuntamente:
+
+- tipo de acontecimiento;
+- proximidad temporal;
+- proximidad geográfica;
+- magnitud u otros atributos cuantitativos cuando sean aplicables;
+- países afectados;
+- similitud estructural.
+
+No se fijarán en esta especificación umbrales universales de tiempo, distancia o magnitud para todas las fuentes. Los umbrales deberán ser específicos del tipo de fenómeno y validarse con datos reales antes de incorporarse al motor.
+
+La magnitud no deberá utilizarse como condición rígida cuando la propia fuente pueda revisar sus estimaciones entre actualizaciones.
+
+Si la coincidencia no es suficientemente inequívoca, la Evidence permanecerá sin EVENT o pendiente de resolución. La prioridad será evitar falsos merges antes que maximizar la cobertura automática.
+
+### 13.19 Principio de actualización frente a duplicación
+
+Una actualización de una fuente sobre un acontecimiento existente deberá modificar la representación del EVENT o añadir nueva Evidence según corresponda, no crear un acontecimiento paralelo.
+
+La regla conceptual será:
+
+```text
+mismo acontecimiento
+        ↓
+misma identidad de fuente cuando exista
+        ↓
+misma identidad STATION V
+        ↓
+nuevas Evidence / nueva versión cuando proceda
+```
+
+La implementación deberá distinguir entre:
+
+- nueva observación del mismo acontecimiento;
+- nueva evidencia independiente sobre el mismo acontecimiento;
+- modificación material del acontecimiento;
+- nuevo acontecimiento.
+
 ## 14. Evidence
 
 ```text
@@ -670,6 +777,8 @@ content_hash
 ```
 
 `event_id` podrá ser `NULL` cuando la Evidence todavía no haya sido asociada de forma suficientemente fiable a un EVENT.
+
+Cuando una fuente estructurada proporcione identificadores externos del acontecimiento o de una actualización/episodio, estos deberán conservarse en la representación de Evidence mediante los campos o estructuras de datos definidos por la implementación, sin convertirlos en el `event_id` interno de STATION V.
 
 Tipos iniciales:
 
@@ -1347,7 +1456,64 @@ EVENT
 
 La incorporación de una fuente al sistema no implica que todos sus datos generen automáticamente acontecimientos. La función de cada fuente deberá quedar registrada y respetar su capacidad de detección, corroboración, contexto y datos cuantitativos.
 
-### 29.3 Fuentes previstas para fases posteriores
+### 29.3 Reglas de identidad para las fuentes piloto
+
+Las fuentes piloto deberán conservar sus identificadores propios de acontecimiento y, cuando existan, sus identificadores de actualización.
+
+#### USGS
+
+```text
+source = USGS
+external_event_id = USGS event ID
+```
+
+El `external_event_id` será la clave de correspondencia primaria para las actualizaciones del mismo terremoto procedentes de USGS.
+
+#### GDACS
+
+```text
+source = GDACS
+external_event_id = GDACS eventid
+external_episode_id = GDACS episodeid
+```
+
+`eventid` identifica el acontecimiento GDACS. `episodeid` identifica una evaluación/actualización concreta y no deberá crear por sí mismo un nuevo EVENT.
+
+Cuando GDACS proporcione una referencia directa a un evento de NEIC/USGS, esta referencia deberá conservarse para permitir la vinculación determinista entre las evidencias GDACS y USGS del mismo terremoto.
+
+### 29.4 Resolución USGS ↔ GDACS
+
+Para terremotos, la vinculación entre USGS y GDACS utilizará en primer lugar la referencia directa que GDACS proporcione al identificador NEIC/USGS.
+
+El flujo preferente será:
+
+```text
+GDACS eventid
+      ↓
+referencia NEIC/USGS
+      ↓
+USGS external_event_id
+      ↓
+EVENT STATION V común
+```
+
+Esta coincidencia determinista tendrá prioridad sobre cualquier matching heurístico por tiempo, distancia o magnitud.
+
+Las actualizaciones de GDACS mediante nuevos `episodeid` seguirán asociadas al mismo `eventid` y, cuando exista la referencia NEIC/USGS correspondiente, al mismo EVENT de STATION V.
+
+Los cambios de magnitud o coordenadas entre actualizaciones no se interpretarán automáticamente como nuevos acontecimientos. Los valores recibidos se conservarán como parte de la evidencia/actualización y podrán provocar una nueva versión del EVENT cuando exista un cambio material.
+
+### 29.5 Fallback cross-source
+
+Cuando no exista una referencia externa cruzable, la resolución podrá utilizar un matching secundario basado en tipo, tiempo, localización, países afectados y atributos cuantitativos.
+
+No se establecerán umbrales universales de tiempo, distancia o magnitud en esta especificación. Antes de fijar valores operativos deberán validarse con muestras reales y separarse por tipo de fenómeno.
+
+La magnitud no será una condición rígida cuando la fuente pueda revisar sus estimaciones entre actualizaciones.
+
+Ante una coincidencia ambigua, la evidencia permanecerá sin EVENT o pendiente de resolución. Se priorizará evitar duplicaciones incorrectas y falsos merges frente a maximizar la cobertura automática.
+
+### 29.6 Fuentes previstas para fases posteriores
 
 Una vez validado el pipeline con las fuentes piloto, podrán incorporarse:
 
@@ -1381,7 +1547,7 @@ Evidencia primaria o institucional sobre crisis, decisiones,
 operaciones, alertas y acontecimientos internacionales.
 ```
 
-### 29.4 Medios de comunicación y fuentes de descubrimiento
+### 29.7 Medios de comunicación y fuentes de descubrimiento
 
 Medios internacionales de alta calidad, como Reuters, podrán utilizarse como fuentes de descubrimiento o corroboración cuando exista acceso público y permitido para el uso concreto.
 
@@ -1391,7 +1557,7 @@ La arquitectura no dependerá de un único medio de comunicación.
 
 La utilización de una fuente de descubrimiento no implicará que el contenido publicado por dicha fuente pueda copiarse, redistribuirse o almacenarse íntegramente. Se conservarán únicamente los elementos necesarios para la trazabilidad y el funcionamiento del modelo, de acuerdo con las condiciones de uso aplicables.
 
-### 29.5 Criterios de incorporación
+### 29.8 Criterios de incorporación
 
 Antes de incorporar una nueva fuente al pipeline OSINT se evaluará:
 
@@ -1412,7 +1578,7 @@ La matriz de fuentes será un componente de arquitectura y no una simple lista d
 
 Cada fuente deberá tener una función definida dentro del modelo `SOURCE → EVIDENCE → CLAIM → EVENT`.
 
-### 29.6 Estrategia de implementación
+### 29.9 Estrategia de implementación
 
 No se implementarán todas las fuentes simultáneamente.
 
