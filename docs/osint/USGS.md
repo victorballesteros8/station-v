@@ -60,6 +60,31 @@ El identificador externo de USGS deberá conservarse para permitir deduplicació
 
 La localización geográfica se conservará mediante las coordenadas proporcionadas por la fuente. La asociación con un país se realizará posteriormente mediante la infraestructura geográfica disponible en STATION V cuando proceda.
 
+## Datos específicos de la fuente
+
+Los datos sísmicos propios de USGS no se añadirán como columnas específicas a la tabla común `EVIDENCE`.
+
+Se conservarán en la estructura flexible de datos estructurados asociada a la evidencia, utilizando el modelo común definido en `docs/osint/SOURCES.md`.
+
+Para USGS, el payload normalizado podrá conservar campos como:
+
+- `external_id`;
+- `time`;
+- `updated`;
+- `magnitude`;
+- `place`;
+- `latitude`;
+- `longitude`;
+- `depth`;
+- `alert`;
+- `significance`;
+- `tsunami`;
+- `felt`;
+- `mmi`;
+- `cdi`.
+
+La estructura flexible no sustituirá a los campos comunes de `EVIDENCE` ni a la referencia a la fuente original.
+
 ## Clasificación
 
 La magnitud, significancia, alerta y demás campos de USGS son datos de la fuente y no equivalen directamente a `severity`, `Escalation Score` o `Country Risk` de STATION V.
@@ -71,6 +96,8 @@ Las reglas de transformación a categorías y severidad deberán definirse antes
 El identificador externo estable proporcionado por USGS será la referencia primaria para evitar la creación de duplicados del mismo registro.
 
 Los cambios posteriores de un mismo registro deberán poder tratarse como actualización de la evidencia en lugar de generar una nueva entidad duplicada.
+
+`external_id` y `content_hash` tendrán funciones diferentes: el primero identifica el registro externo y el segundo permite identificar el contenido de la evidencia.
 
 ## Limitaciones
 
@@ -96,12 +123,13 @@ La primera implementación deberá centrarse en:
 2. normalizar los registros;
 3. registrar SOURCE y EVIDENCE;
 4. preservar el identificador externo;
-5. evitar duplicados;
-6. mantener la trazabilidad hacia la fuente original;
-7. preparar la posterior generación o actualización de CLAIM y EVENT.
+5. conservar los datos específicos relevantes mediante la estructura flexible de evidencia;
+6. evitar duplicados;
+7. mantener la trazabilidad hacia la fuente original;
+8. preparar la posterior generación o actualización de CLAIM y EVENT.
 
 No se implementará inicialmente un scheduler automático ni impacto sobre Country Risk.
 
 ## Revisión
 
-Documento inicial de la integración USGS. Deberá actualizarse cuando cambien el mecanismo de acceso, los campos utilizados, las condiciones de uso o las reglas metodológicas específicas del conector.
+Documento actualizado para definir el almacenamiento de datos específicos de USGS mediante la estructura flexible común de evidencia.
