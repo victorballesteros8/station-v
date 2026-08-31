@@ -51,6 +51,9 @@ def _create_event(
     version_id = uuid4()
     detected_at = time_start or datetime.now(timezone.utc)
 
+    # current_version_id has a FK to event_versions.id, so the EVENT must
+    # exist before its first VERSION can be inserted. It is intentionally
+    # created NULL and populated only after the version insert succeeds.
     cur.execute(
         """
         INSERT INTO events (
@@ -59,9 +62,9 @@ def _create_event(
             first_detected_at,
             last_evidence_at
         )
-        VALUES (%s, %s, %s, %s)
+        VALUES (%s, NULL, %s, %s)
         """,
-        (event_id, version_id, detected_at, detected_at),
+        (event_id, detected_at, detected_at),
     )
 
     import json
@@ -128,6 +131,19 @@ def _create_event(
             time_precision,
             json.dumps(canonical_data),
         ),
+    )
+
+    # Only now can current_version_id safely reference the newly-created
+    # EVENT VERSION.
+    cur.execute(
+        """
+        UPDATE events
+        SET
+            current_version_id = %s,
+            updated_at = now()
+        WHERE id = %s
+        """,
+        (version_id, event_id),
     )
 
     if country_iso3:
