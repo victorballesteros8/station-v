@@ -10,6 +10,20 @@ La implementación OSINT V1 deberá poder ejecutarse con un coste de licencias y
 
 La gratuidad no sustituye la revisión de licencias, condiciones de uso, límites técnicos y permisos de cada fuente.
 
+## Modelo de almacenamiento OSINT
+
+STATION V utilizará un modelo común para todas las fuentes OSINT:
+
+`SOURCE → EVIDENCE → CLAIM → EVENT`
+
+`EVIDENCE` conservará los atributos comunes necesarios para identificar, contextualizar, evaluar y trazar la evidencia. Los datos estructurados específicos de cada fuente se conservarán en una estructura flexible asociada a la evidencia, evitando añadir columnas específicas de una fuente al modelo común.
+
+La estructura flexible deberá permitir conservar el payload normalizado relevante de cada fuente sin sustituir los campos comunes de `EVIDENCE` ni romper la trazabilidad hacia la fuente original.
+
+El identificador externo de cada fuente se conservará de forma independiente de `content_hash` y se utilizará para deduplicación cuando la fuente proporcione un identificador estable.
+
+Este modelo deberá ser reutilizable por USGS, GDACS, GDELT y las fuentes posteriores.
+
 ## Fuentes piloto
 
 | Fuente | Estado | Función principal | Coste V1 |
