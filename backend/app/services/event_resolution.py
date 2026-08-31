@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -49,6 +49,7 @@ def _create_event(
 ) -> UUID:
     event_id = uuid4()
     version_id = uuid4()
+    detected_at = time_start or datetime.now(timezone.utc)
 
     cur.execute(
         """
@@ -60,10 +61,17 @@ def _create_event(
         )
         VALUES (%s, %s, %s, %s)
         """,
-        (event_id, version_id, time_start, time_start),
+        (event_id, version_id, detected_at, detected_at),
     )
 
     import json
+
+    location_precision = (
+        "point"
+        if latitude is not None and longitude is not None
+        else "unknown"
+    )
+    time_precision = "exact" if time_start is not None else "unknown"
 
     cur.execute(
         """
@@ -93,14 +101,10 @@ def _create_event(
                 THEN ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
                 ELSE NULL
             END,
-            CASE
-                WHEN %s IS NOT NULL AND %s IS NOT NULL
-                THEN 'point'
-                ELSE 'unknown'
-            END,
             %s,
             %s,
-            'exact',
+            %s,
+            %s,
             'active',
             'info',
             'high',
@@ -118,10 +122,10 @@ def _create_event(
             longitude,
             longitude,
             latitude,
-            latitude,
-            longitude,
-            canonical_data.get("place"),
+            location_precision,
+            canonical_data.get("place") or canonical_data.get("event_name"),
             time_start,
+            time_precision,
             json.dumps(canonical_data),
         ),
     )
