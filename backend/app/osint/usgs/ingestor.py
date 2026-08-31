@@ -10,8 +10,8 @@ from backend.app.osint.common.evidence_persistence import (
     upsert_evidence,
 )
 from backend.app.osint.usgs.claim_builder import build_usgs_claim
-from backend.app.osint.usgs.claim_persistence import (
-    _persist_usgs_claim,
+from backend.app.osint.common.claim_persistence import (
+    _persist_claim,
 )
 from backend.app.osint.usgs.client import fetch_usgs_feed
 from backend.app.osint.usgs.normalizer import (
@@ -200,7 +200,7 @@ def ingest_usgs(
                     earthquake
                 )
 
-                _persist_usgs_claim(
+                _persist_claim(
                     cur,
                     evidence_id,
                     claim,

@@ -12,8 +12,8 @@ from backend.app.osint.common.evidence_persistence import (
 from backend.app.osint.gdacs.claim_builder import (
     build_gdacs_claim,
 )
-from backend.app.osint.gdacs.claim_persistence import (
-    _persist_gdacs_claim,
+from backend.app.osint.common.claim_persistence import (
+    _persist_claim,
 )
 from backend.app.osint.gdacs.client import (
     fetch_gdacs_events,
@@ -248,7 +248,7 @@ def ingest_gdacs(
                     earthquake
                 )
 
-                _persist_gdacs_claim(
+                _persist_claim(
                     cur,
                     evidence_id,
                     claim,

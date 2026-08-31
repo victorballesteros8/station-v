@@ -5,8 +5,8 @@ from typing import Any
 
 from backend.app.db import get_connection
 from backend.app.osint.usgs.claim_builder import build_usgs_claim
-from backend.app.osint.usgs.claim_persistence import (
-    _persist_usgs_claim,
+from backend.app.osint.common.claim_persistence import (
+    _persist_claim,
 )
 from backend.app.osint.usgs.normalizer import USGSEarthquake
 
@@ -166,7 +166,7 @@ def backfill_usgs_claims() -> int:
                     earthquake
                 )
 
-                _persist_usgs_claim(
+                _persist_claim(
                     cur,
                     str(evidence_id),
                     claim,

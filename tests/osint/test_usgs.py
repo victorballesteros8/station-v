@@ -14,7 +14,7 @@ from backend.app.osint.usgs.claim_builder import (
 )
 
 from unittest.mock import patch
-from unittest.mock import MagicMock
+
 
 def _sample_feature() -> dict:
     return {
@@ -146,8 +146,20 @@ def test_ingest_usgs_creates_source_and_evidence():
         "backend.app.osint.usgs.ingestor.get_connection"
     ) as mock_connection:
 
-        connection = mock_connection.return_value.__enter__.return_value
-        cursor = connection.cursor.return_value.__enter__.return_value
+        connection = (
+            mock_connection
+            .return_value
+            .__enter__
+            .return_value
+        )
+
+        cursor = (
+            connection
+            .cursor
+            .return_value
+            .__enter__
+            .return_value
+        )
 
         cursor.fetchone.side_effect = [
             None,
@@ -219,8 +231,20 @@ def test_ingest_usgs_empty_feed():
         "backend.app.osint.usgs.ingestor.get_connection"
     ) as mock_connection:
 
-        connection = mock_connection.return_value.__enter__.return_value
-        cursor = connection.cursor.return_value.__enter__.return_value
+        connection = (
+            mock_connection
+            .return_value
+            .__enter__
+            .return_value
+        )
+
+        cursor = (
+            connection
+            .cursor
+            .return_value
+            .__enter__
+            .return_value
+        )
 
         cursor.fetchone.return_value = ("source-id",)
 
@@ -277,132 +301,6 @@ def test_build_usgs_claim_without_place():
     )
 
 
-def test_persist_usgs_claim():
-    claim = USGSClaim(
-        claim_type="earthquake",
-        statement=(
-            "Earthquake detected by USGS: "
-            "magnitude 5.6, 10 km NW of Example."
-        ),
-        assertion_status="confirmed",
-        confidence="high",
-    )
-
-    with patch(
-        "backend.app.osint.usgs.claim_persistence.get_connection"
-    ) as mock_connection:
-        connection = (
-            mock_connection
-            .return_value
-            .__enter__
-            .return_value
-        )
-
-        cursor = (
-            connection
-            .cursor
-            .return_value
-            .__enter__
-            .return_value
-        )
-
-        cursor.fetchone.return_value = (
-            "claim-id",
-        )
-
-        from backend.app.osint.usgs.claim_persistence import (
-            persist_usgs_claim,
-        )
-
-        result = persist_usgs_claim(
-            "evidence-id",
-            claim,
-        )
-
-    assert result == "claim-id"
-    connection.commit.assert_called_once()
-    cursor.execute.assert_called_once()
-
-
-def test_persist_usgs_claim_is_idempotent():
-    claim = USGSClaim(
-        claim_type="earthquake",
-        statement=(
-            "Earthquake detected by USGS: "
-            "magnitude 5.6, 10 km NW of Example."
-        ),
-        assertion_status="confirmed",
-        confidence="high",
-    )
-
-    with patch(
-        "backend.app.osint.usgs.claim_persistence.get_connection"
-    ) as mock_connection:
-        connection = (
-            mock_connection
-            .return_value
-            .__enter__
-            .return_value
-        )
-
-        cursor = (
-            connection
-            .cursor
-            .return_value
-            .__enter__
-            .return_value
-        )
-
-        cursor.fetchone.return_value = (
-            "same-claim-id",
-        )
-
-        from backend.app.osint.usgs.claim_persistence import (
-            persist_usgs_claim,
-        )
-
-        first = persist_usgs_claim(
-            "evidence-id",
-            claim,
-        )
-
-        second = persist_usgs_claim(
-            "evidence-id",
-            claim,
-        )
-
-    assert first == "same-claim-id"
-    assert second == "same-claim-id"
-
-def test_persist_usgs_claim_with_existing_cursor():
-    claim = USGSClaim(
-        claim_type="earthquake",
-        statement=(
-            "Earthquake detected by USGS: "
-            "magnitude 5.6, 10 km NW of Example."
-        ),
-        assertion_status="confirmed",
-        confidence="high",
-    )
-
-    cursor = MagicMock()
-    cursor.fetchone.return_value = (
-        "claim-id",
-    )
-
-    from backend.app.osint.usgs.claim_persistence import (
-        _persist_usgs_claim,
-    )
-
-    result = _persist_usgs_claim(
-        cursor,
-        "evidence-id",
-        claim,
-    )
-
-    assert result == "claim-id"
-    cursor.execute.assert_called_once()
-
 def test_earthquake_from_evidence():
     from backend.app.osint.usgs.claim_backfill import (
         _earthquake_from_evidence,
@@ -445,6 +343,7 @@ def test_earthquake_from_evidence():
     assert earthquake.cdi == 4.2
     assert earthquake.time is not None
     assert earthquake.updated is not None
+
 
 def test_earthquake_from_evidence_handles_missing_optional_values():
     from backend.app.osint.usgs.claim_backfill import (
