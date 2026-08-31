@@ -369,11 +369,31 @@ Países con mayor Trend negativo.
 
 ### 10.4 Eventos más relevantes
 
-Eventos Alta/Crítica ordenados por Escalation Score descendente.
+Se mostrarán como máximo los 10 acontecimientos más relevantes con
+Severidad Alta o Crítica.
+
+La ordenación se realizará jerárquicamente:
+
+1. Severidad del acontecimiento, priorizando Crítica sobre Alta.
+2. Escalation Score descendente dentro de cada nivel de severidad.
+
+Por tanto, un acontecimiento Crítico con un Escalation Score inferior
+aparecerá antes que un acontecimiento Alto con un Escalation Score superior.
+
+Ejemplo:
+
+Crítica — 7.6
+Crítica — 6.8
+Alta — 9.2
+Alta — 8.5
+
+Los acontecimientos con Severidad inferior a Alta no aparecerán en este
+panel.
 
 No se incluirá todavía un ranking regional.
 
-Podrán incorporarse paneles adicionales en futuras iteraciones sin modificar la arquitectura conceptual del dashboard.
+Podrán incorporarse paneles adicionales en futuras iteraciones sin modificar
+la arquitectura conceptual del dashboard.
 
 ## 11. Búsqueda
 
