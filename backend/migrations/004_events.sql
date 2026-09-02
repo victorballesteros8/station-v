@@ -59,7 +59,7 @@ DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'event_relations_type_valid' AND conrelid = 'event_relations'::regclass) THEN
         ALTER TABLE event_relations ADD CONSTRAINT event_relations_type_valid
-            CHECK (relation_type IN ('related', 'preceded_by', 'followed_by', 'escalation_of', 'continuation_of', 'duplicate_of'));
+            CHECK (relation_type IN ('related_to', 'preceded_by', 'followed_by', 'escalates', 'part_of', 'caused_by', 'same_series', 'duplicate_of'));
     END IF;
 END $$;
 
