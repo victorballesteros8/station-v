@@ -44,7 +44,7 @@ STATION V no será un agregador masivo de noticias. La arquitectura debe transfo
 - Pantalla Situación.
 - Búsqueda de países y acontecimientos.
 - Evidencias y fuentes asociadas.
-- Motor de scoring V1.1.
+- Motor de scoring definido por la metodología matemática vigente del proyecto.
 - Histórico de Country Risk.
 - API REST.
 - Base de datos relacional.
@@ -1055,9 +1055,9 @@ La V1 utilizará una función temporal definida en el motor de scoring.
 
 ### Repetition Weight
 
-La repetición de acontecimientos similares no generará crecimiento lineal infinito.
+La repetición de acontecimientos correlacionados se tendrá en cuenta mediante las reglas de correlación y repetición definidas en la metodología matemática vigente.
 
-Se utilizará una función de saturación.
+La agregación de los impactos y cualquier mecanismo de saturación se aplicarán de acuerdo con dicha metodología y constituyen un mecanismo distinto del Repetition Weight.
 
 ## 22. Matriz semántica
 
@@ -1088,218 +1088,43 @@ La matriz semántica no generará por sí misma el valor final de Country Risk.
 
 ## 23. Global Risk
 
-Global Risk será un indicador agregado de presión/riesgo sistémico internacional.
+Global Risk representará una medida agregada de la situación geopolítica global.
 
-Su objetivo será responder a la pregunta:
+Su objetivo será proporcionar una visión sintética de la intensidad, distribución, amplitud y evolución del riesgo observado a escala global, sin sustituir al análisis individual por país.
 
-> ¿Está aumentando o disminuyendo la tensión/riesgo del sistema internacional en conjunto?
+El cálculo, las ponderaciones, las reglas de selección por Tier y los criterios de cobertura estarán definidos en la metodología matemática vigente del proyecto.
 
-Global Risk no será una media simple de Country Risk.
+### 23.1 Interpretación
 
-El modelo V1 tendrá en cuenta la importancia sistémica estructural de los países y la distribución del riesgo entre Tier 1, Tier 2 y Tier 3.
+Global Risk permitirá identificar cambios generales en el entorno geopolítico y facilitará una lectura rápida de la situación global.
 
-### 23.1 Fórmula general
+No deberá interpretarse como una probabilidad de conflicto mundial ni como una predicción.
 
-El Global Risk se calculará mediante:
+### 23.2 Naturaleza
 
-```text
-GR = 0.65 × T1 + 0.25 × T2 + 0.10 × T3
-```
+Global Risk será un indicador agregado derivado de los Country Risk disponibles y de las reglas metodológicas vigentes.
 
-donde:
+No constituirá una nueva dimensión de riesgo independiente.
 
-```text
-T1 = presión de los países Tier 1
-T2 = presión de los países Tier 2
-T3 = presión de los países Tier 3
-```
+### 23.3 Cobertura y disponibilidad
 
-El resultado final estará limitado al intervalo 0–100.
+La cobertura de Global Risk dependerá de la disponibilidad y calidad de los Country Risk calculados.
 
-### 23.2 Presión Tier 1
+La metodología vigente definirá los criterios necesarios para determinar cuándo la cobertura disponible es suficiente para producir e interpretar el indicador.
 
-La presión Tier 1 se calculará mediante:
+### 23.4 Interdependencia
 
-```text
-T1 = 0.50 × I + 0.30 × A + 0.20 × B
-```
+Los acontecimientos y riesgos de distintos países pueden estar relacionados entre sí.
 
-donde:
-
-```text
-I = intensidad del riesgo Tier 1
-A = Country Risk medio de Tier 1
-B = amplitud del deterioro de Tier 1
-```
-
-### 23.3 Intensidad Tier 1
-
-La intensidad Tier 1 se calculará mediante:
-
-```text
-I = 0.60 × max(T1) + 0.40 × mean(Top4 T1)
-```
-
-`max(T1)` representa el Country Risk más elevado entre los países Tier 1.
-
-`mean(Top4 T1)` representa la media de los cuatro Country Risk más elevados entre los países Tier 1.
-
-Esta combinación permite que una situación extrema de una potencia sistémica tenga un efecto significativo sin ignorar el deterioro simultáneo de varias potencias.
-
-### 23.4 Country Risk medio Tier 1
-
-```text
-A = mean(T1)
-```
-
-donde se utilizarán los Country Risk de los países Tier 1 disponibles.
-
-Este componente representa el nivel medio de riesgo existente dentro del núcleo sistémico.
-
-### 23.5 Amplitud del deterioro Tier 1
-
-```text
-B = 100 × N(Country Risk ≥ 50) / N(Tier 1)
-```
-
-Esto permitirá diferenciar entre una situación de riesgo concentrada en una única potencia y una situación de deterioro generalizado del núcleo sistémico.
-
-### 23.6 Presión Tier 2
-
-La presión Tier 2 se calculará utilizando los ocho países Tier 2 con mayor Country Risk:
-
-```text
-T2 = mean(Top8 T2)
-```
-
-La clasificación interna de Tier 2 podrá distinguir entre T2-A, T2-B y T2-Strategic, pero estas categorías no utilizarán fórmulas diferentes en el cálculo del Global Risk V1.
-
-### 23.7 Presión Tier 3
-
-La presión Tier 3 se calculará utilizando los diez países Tier 3 con mayor Country Risk:
-
-```text
-T3 = mean(Top10 T3)
-```
-
-La contribución de Tier 3 será deliberadamente limitada para evitar que un elevado número de crisis regionales de países con menor importancia sistémica domine el indicador.
-
-### 23.8 Interpretación
-
-Global Risk deberá reflejar la diferencia entre:
-
-- una perturbación extrema pero localizada en un único actor sistémico;
-- un deterioro simultáneo de varias potencias sistémicas;
-- una crisis amplia entre actores Tier 2;
-- una situación de riesgo generalizado en los principales actores del sistema internacional.
-
-Un elevado número de países Tier 3 en situación de riesgo no deberá producir por sí mismo un Global Risk elevado si los principales actores Tier 1 y Tier 2 permanecen estables.
-
-### 23.9 Naturaleza del indicador
-
-Global Risk será un índice sintético de presión/riesgo sistémico internacional.
-
-No será:
-
-- una probabilidad;
-- una predicción;
-- una estimación de probabilidad de guerra mundial;
-- una suma de acontecimientos;
-- una media simple de Country Risk;
-- una representación de relaciones causales exhaustivas del sistema internacional.
-
-El indicador utilizará los Country Risk como información de entrada, pero incorporará la importancia sistémica estructural de cada país mediante su clasificación por Tier.
-
-### 23.10 Cobertura y estado de disponibilidad
-
-El Global Risk podrá calcularse aunque no exista información de Country Risk para todos los países del universo STATION V.
-
-La ausencia de un snapshot válido no se interpretará como Country Risk = 0. Los países sin información válida quedarán excluidos del cálculo, de acuerdo con las reglas definidas para cada Tier.
-
-Para evaluar la representatividad del indicador se calcularán dos métricas:
-
-```text
-Cobertura global =
-países con Country Risk válido / total de países del universo STATION V
-```
-
-```text
-Cobertura sistémica =
-países Tier 1 y Tier 2 con Country Risk válido /
-total de países Tier 1 y Tier 2
-```
-
-La cobertura no modificará matemáticamente el valor del Global Risk.
-Se utilizará exclusivamente como indicador de disponibilidad y representatividad de los datos.
-
-El estado de cobertura se clasificará de la siguiente forma:
-
-```text
-INSUFICIENTE
-Cobertura global < 25 %
-o
-Cobertura sistémica < 50 %
-```
-
-```text
-PROVISIONAL
-
-Cobertura global >= 25 %
-y
-Cobertura sistémica >= 50 %
-
-pero no se cumplen simultáneamente los criterios de estado OPERATIVO.
-```
-
-```text
-OPERATIVO
-
-Cobertura global >= 60 %
-y
-Cobertura sistémica >= 80 %
-```
-
-Cuando el estado sea INSUFICIENTE o PROVISIONAL, el frontend podrá mostrar un indicador visual asociado al panel de Global Risk para advertir de la limitación de cobertura.
-
-El estado OPERATIVO no requerirá un indicador visual adicional.
-
-La cobertura constituye un metadato de calidad y representatividad del indicador y no debe confundirse con el nivel de riesgo expresado por Global Risk.
-
-### 23.11 Interdependencia
-
-La V1 no incorporará todavía una medida explícita de interdependencia o contagio entre países.
-
-La arquitectura podrá incorporar posteriormente:
-
-```text
-Trade Exposure
-
-Energy Exposure
-
-Financial Exposure
-
-Military Alliances
-
-Supply Chain Exposure
-
-Strategic Infrastructure
-```
-
-Estas relaciones podrán modificar el impacto sistémico en versiones posteriores.
+Global Risk deberá permitir reflejar esta interdependencia cuando esté sustentada por el modelo de eventos, relaciones y metodología vigente.
 
 ## 24. Confidence
 
-Confidence:
+Confidence representará la solidez y calidad de la evidencia disponible para sustentar una evaluación.
 
-```text
-Confidence =
-f(Source Reliability,
-Independence,
-Corroboration,
-Recency)
-```
+Confidence no equivale a severidad y no constituye por sí mismo un componente adicional del Country Risk.
 
-La fórmula exacta podrá evolucionar durante el desarrollo V1.
+Su cálculo y sus reglas de agregación se definirán en el modelo de evidencia y la metodología correspondiente.
 
 ## 25. Risk Engine
 
@@ -1458,60 +1283,11 @@ La incorporación de una fuente al sistema no implica que todos sus datos genere
 
 ### 29.3 Reglas de identidad para las fuentes piloto
 
-Las fuentes piloto deberán conservar sus identificadores propios de acontecimiento y, cuando existan, sus identificadores de actualización.
+Los detalles operativos de identificación, actualización y resolución entre fuentes se definirán en los documentos especializados de fuentes, evidencia y Event Resolution.
 
-#### USGS
+La Technical Specification no fija reglas específicas de correspondencia entre identificadores, episodios o fuentes concretas.
 
-```text
-source = USGS
-external_event_id = USGS event ID
-```
-
-El `external_event_id` será la clave de correspondencia primaria para las actualizaciones del mismo terremoto procedentes de USGS.
-
-#### GDACS
-
-```text
-source = GDACS
-external_event_id = GDACS eventid
-external_episode_id = GDACS episodeid
-```
-
-`eventid` identifica el acontecimiento GDACS. `episodeid` identifica una evaluación/actualización concreta y no deberá crear por sí mismo un nuevo EVENT.
-
-Cuando GDACS proporcione una referencia directa a un evento de NEIC/USGS, esta referencia deberá conservarse para permitir la vinculación determinista entre las evidencias GDACS y USGS del mismo terremoto.
-
-### 29.4 Resolución USGS ↔ GDACS
-
-Para terremotos, la vinculación entre USGS y GDACS utilizará en primer lugar la referencia directa que GDACS proporcione al identificador NEIC/USGS.
-
-El flujo preferente será:
-
-```text
-GDACS eventid
-      ↓
-referencia NEIC/USGS
-      ↓
-USGS external_event_id
-      ↓
-EVENT STATION V común
-```
-
-Esta coincidencia determinista tendrá prioridad sobre cualquier matching heurístico por tiempo, distancia o magnitud.
-
-Las actualizaciones de GDACS mediante nuevos `episodeid` seguirán asociadas al mismo `eventid` y, cuando exista la referencia NEIC/USGS correspondiente, al mismo EVENT de STATION V.
-
-Los cambios de magnitud o coordenadas entre actualizaciones no se interpretarán automáticamente como nuevos acontecimientos. Los valores recibidos se conservarán como parte de la evidencia/actualización y podrán provocar una nueva versión del EVENT cuando exista un cambio material.
-
-### 29.5 Fallback cross-source
-
-Cuando no exista una referencia externa cruzable, la resolución podrá utilizar un matching secundario basado en tipo, tiempo, localización, países afectados y atributos cuantitativos.
-
-No se establecerán umbrales universales de tiempo, distancia o magnitud en esta especificación. Antes de fijar valores operativos deberán validarse con muestras reales y separarse por tipo de fenómeno.
-
-La magnitud no será una condición rígida cuando la fuente pueda revisar sus estimaciones entre actualizaciones.
-
-Ante una coincidencia ambigua, la evidencia permanecerá sin EVENT o pendiente de resolución. Se priorizará evitar duplicaciones incorrectas y falsos merges frente a maximizar la cobertura automática.
+La arquitectura deberá permitir conservar los identificadores externos proporcionados por las fuentes y utilizarlos para resolver actualizaciones y correspondencias cuando resulte procedente.
 
 ### 29.6 Fuentes previstas para fases posteriores
 
