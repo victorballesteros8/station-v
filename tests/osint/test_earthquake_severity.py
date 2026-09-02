@@ -1,6 +1,6 @@
 import pytest
 
-from app.osint.earthquake_severity import (
+from backend.app.osint.earthquake_severity import (
     resolve_gdacs_earthquake_severity,
     resolve_usgs_earthquake_severity,
     severity_from_magnitude,
