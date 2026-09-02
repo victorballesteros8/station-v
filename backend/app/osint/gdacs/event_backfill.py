@@ -8,6 +8,7 @@ from backend.app.osint.earthquake_severity import (
     resolve_gdacs_earthquake_severity,
 )
 from backend.app.services.event_resolution import resolve_evidence_event
+from backend.app.services.risk_impact_service import assign_event_risk_impacts
 
 
 GDACS_SOURCE_NAME = "GDACS"
@@ -67,6 +68,7 @@ def backfill_gdacs_events() -> int:
 
             rows = cur.fetchall()
             resolved = 0
+            impacts_assigned = 0
 
             for row in rows:
                 (
@@ -105,7 +107,7 @@ def backfill_gdacs_events() -> int:
                     }
                 )
 
-                resolve_evidence_event(
+                event_id = resolve_evidence_event(
                     cur,
                     evidence_id=str(evidence_id),
                     source_id=str(source_id),
@@ -134,10 +136,15 @@ def backfill_gdacs_events() -> int:
                     canonical_data=structured_data,
                 )
 
+                impacts_assigned += assign_event_risk_impacts(
+                    cur,
+                    str(event_id),
+                )
                 resolved += 1
 
         conn.commit()
 
+    print(f"GDACS RISK IMPACTS ASSIGNED: {impacts_assigned}")
     return resolved
 
 
