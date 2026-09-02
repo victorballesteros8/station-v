@@ -12,6 +12,7 @@ from backend.app.osint.common.claim_persistence import (
 from backend.app.osint.common.evidence_persistence import (
     upsert_evidence,
 )
+from backend.app.osint.earthquake_severity import resolve_gdacs_earthquake_severity
 from backend.app.osint.gdacs.claim_builder import build_gdacs_claim
 from backend.app.osint.gdacs.client import fetch_gdacs_events
 from backend.app.osint.gdacs.normalizer import (
@@ -222,6 +223,13 @@ def ingest_gdacs(
                 claim = build_gdacs_claim(earthquake)
                 _persist_claim(cur, evidence_id, claim)
 
+                severity = resolve_gdacs_earthquake_severity(
+                    {
+                        "magnitude": earthquake.magnitude,
+                        "alert_level": earthquake.alert_level,
+                    }
+                )
+
                 resolve_evidence_event(
                     cur,
                     evidence_id=evidence_id,
@@ -237,7 +245,10 @@ def ingest_gdacs(
                         )
                     ),
                     summary=claim.statement,
+                    category="disaster",
                     subtype="earthquake",
+                    severity=severity,
+                    confidence=claim.confidence,
                     time_start=earthquake.event_time,
                     latitude=earthquake.latitude,
                     longitude=earthquake.longitude,
