@@ -145,7 +145,7 @@ red
 
 STATION V conservará el nivel original de GDACS.
 
-Para terremotos, el nivel de alerta se utilizará junto con la magnitud para resolver la `severity` del EVENT. No se realizará una conversión directa del nivel GDACS a `Country Risk`.
+Para terremotos, el nivel de alerta se utilizará junto con la magnitud para resolver la `severity` del EVENT.
 
 La referencia mínima por nivel de alerta será:
 
@@ -155,7 +155,7 @@ La referencia mínima por nivel de alerta será:
 | `orange` | `medium` |
 | `red` | `high` |
 
-También se aplican las referencias orientativas de magnitud:
+También se aplican las referencias de magnitud:
 
 | Magnitud | Severidad mínima |
 |---|---|
@@ -165,7 +165,18 @@ También se aplican las referencias orientativas de magnitud:
 | M 7,0–7,9 | `high` |
 | M ≥ 8,0 | `critical` |
 
-La severidad resultante será la mayor respaldada por las señales objetivas disponibles. Nuevas señales de impacto objetivas podrán elevarla, pero nunca reducir la referencia mínima ya establecida.
+La severidad resultante será la mayor respaldada por las señales objetivas disponibles. No se sumarán puntos entre señales ni se utilizará una media entre criterios.
+
+En V1.2, las señales específicas adicionales de impacto se interpretarán de la siguiente manera cuando estén disponibles y tengan significado aplicable al registro:
+
+- `MMI < VII`: no eleva;
+- `MMI VII`: eleva un nivel;
+- `MMI VIII`: eleva dos niveles;
+- `MMI IX o superior`: eleva dos niveles;
+- indicador explícito de tsunami: eleva un nivel;
+- otros campos objetivos solo podrán elevar si se define expresamente una regla antes de su implementación.
+
+Las elevaciones nunca podrán reducir la referencia mínima ya establecida por magnitud o por alerta GDACS.
 
 Las severidades USGS y GDACS no se promediarán. Cada fuente evalúa su propia evidencia. Una fuente independiente puede aportar evidencia para actualizar la severidad del mismo EVENT mediante una nueva versión, conservando la trazabilidad de la evaluación anterior.
 
