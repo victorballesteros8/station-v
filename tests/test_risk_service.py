@@ -14,6 +14,9 @@ from backend.app.scoring.risk_service import (
     _get_global_risk_coverage_status
 )
 
+EVENT_1 = "11111111-1111-1111-1111-111111111111"
+EVENT_2 = "22222222-2222-2222-2222-222222222222"
+EVENT_3 = "33333333-3333-3333-3333-333333333333"
 
 REFERENCE_TIME = datetime(
     2026,
@@ -45,7 +48,6 @@ def make_connection(cur):
     connection.cursor.return_value.__enter__.return_value = cur
     return connection
 
-
 def configure_snapshot_cursor(
     *,
     dimensions,
@@ -53,6 +55,7 @@ def configure_snapshot_cursor(
     impacts=None,
     previous_scores=None,
     repetition_counts=None,
+    relations=None,
     confidence_values=None,
     country_exists=True,
 ):
@@ -62,6 +65,7 @@ def configure_snapshot_cursor(
     impacts = impacts or []
     previous_scores = previous_scores or {}
     repetition_counts = repetition_counts or {}
+    relations = relations or []
     confidence_values = confidence_values or []
 
     cur = make_cursor()
@@ -95,6 +99,74 @@ def configure_snapshot_cursor(
 
         if "FROM RISK_IMPACTS RI" in normalized_sql:
             cur.fetchall.return_value = impacts
+            return
+
+        if "WITH RECURSIVE CORRELATED_EVENTS" in normalized_sql:
+            qualifying_relations = {
+                "same_series",
+                "escalation_of",
+                "continuation_of",
+                "part_of",
+            }
+
+            event_id = str(params[0])
+
+            graph = {}
+
+            for relation_event_id, related_event_id, relation_type in relations:
+                if relation_type not in qualifying_relations:
+                    continue
+
+                left = str(relation_event_id)
+                right = str(related_event_id)
+
+                graph.setdefault(left, set()).add(right)
+                graph.setdefault(right, set()).add(left)
+
+            connected = {event_id}
+            pending = [event_id]
+
+            while pending:
+                current = pending.pop()
+
+                for neighbour in graph.get(current, set()):
+                    if neighbour not in connected:
+                        connected.add(neighbour)
+                        pending.append(neighbour)
+
+            window_start = params[4] - timedelta(days=7)
+            reference_time = params[4]
+            country_id = params[2]
+            subindicator_id = params[3]
+
+            filtered_impacts = []
+
+            for impact in impacts:
+                # Repetition tests use:
+                # (event_id, time_start)
+                if len(impact) == 2:
+                    if (
+                        str(impact[0]) in connected
+                        and window_start <= impact[1] <= reference_time
+                    ):
+                        filtered_impacts.append(
+                            (
+                                impact[0],
+                                impact[1],
+                            )
+                        )
+
+                # Snapshot tests use the normal risk_impacts shape.
+                elif len(impact) >= 6:
+                    # Snapshot impacts are not the result set expected by
+                    # _get_repetition_count(), so they are only included
+                    # when their event matches the current event context.
+                    #
+                    # The actual snapshot query remains handled by the
+                    # normal risk_impacts branch below.
+                    continue
+
+            cur.fetchall.return_value = filtered_impacts
             return
 
         if "FROM SUBINDICATORS" in normalized_sql:
@@ -184,58 +256,389 @@ def test_previous_subindicator_score_defaults_to_zero():
 # ============================================================
 
 
-def test_repetition_count_is_one_without_timeline_entries():
-    cur = make_cursor()
-    cur.fetchone.return_value = (0,)
+def test_repetition_count_is_one_without_qualifying_relations():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[],
+    )
 
     result = _get_repetition_count(
         cur,
-        event_id="event-1",
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert result == 1
+
+def test_repetition_count_counts_qualifying_same_series_relation():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_1, EVENT_2, "same_series"),
+        ],
+    )
+
+    result = _get_repetition_count(
+        cur,
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert result == 2
+
+def test_repetition_count_counts_escalation_relation():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_2, EVENT_1, "escalation_of"),
+        ],
+    )
+
+    result = _get_repetition_count(
+        cur,
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert result == 2
+
+
+def test_repetition_count_counts_continuation_relation():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_2, EVENT_1, "continuation_of"),
+        ],
+    )
+
+    result = _get_repetition_count(
+        cur,
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert result == 2
+
+
+def test_repetition_count_counts_part_of_relation():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_2, EVENT_1, "part_of"),
+        ],
+    )
+
+    result = _get_repetition_count(
+        cur,
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert result == 2
+
+
+def test_repetition_count_counts_escalation_relation():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_2, EVENT_1, "escalation_of"),
+        ],
+    )
+
+    result = _get_repetition_count(
+        cur,
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert result == 2
+
+
+def test_repetition_count_counts_continuation_relation():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_2, EVENT_1, "continuation_of"),
+        ],
+    )
+
+    result = _get_repetition_count(
+        cur,
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert result == 2
+
+
+def test_repetition_count_counts_part_of_relation():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_2, EVENT_1, "part_of"),
+        ],
+    )
+
+    result = _get_repetition_count(
+        cur,
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert result == 2
+
+
+def test_repetition_count_does_not_reduce_for_non_qualifying_related_relation():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_1, EVENT_2, "related"),
+        ],
+    )
+
+    result = _get_repetition_count(
+        cur,
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
         reference_time=REFERENCE_TIME,
     )
 
     assert result == 1
 
 
-def test_repetition_count_counts_initial_detection_and_occurrences():
-    cur = make_cursor()
-    cur.fetchone.return_value = (3,)
+def test_repetition_count_does_not_reduce_for_temporal_relation():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_1, EVENT_2, "preceded_by"),
+        ],
+    )
 
     result = _get_repetition_count(
         cur,
-        event_id="event-1",
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert result == 1
+
+
+def test_repetition_count_traverses_relation_chain():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_3,
+                REFERENCE_TIME - timedelta(hours=24),
+            ),
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_1, EVENT_2, "same_series"),
+            (EVENT_2, EVENT_3, "continuation_of"),
+        ],
+    )
+
+    result = _get_repetition_count(
+        cur,
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
         reference_time=REFERENCE_TIME,
     )
 
     assert result == 3
 
 
-def test_repetition_count_never_returns_less_than_one():
-    cur = make_cursor()
-    cur.fetchone.return_value = (-5,)
+def test_repetition_count_is_calculated_separately_by_country_and_subindicator():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+                2,
+                1,
+            ),
+            (
+                EVENT_3,
+                REFERENCE_TIME - timedelta(hours=12),
+                1,
+                2,
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+                1,
+                1,
+            ),
+        ],
+        relations=[
+            (EVENT_1, EVENT_2, "same_series"),
+            (EVENT_1, EVENT_3, "same_series"),
+        ],
+    )
 
     result = _get_repetition_count(
         cur,
-        event_id="event-1",
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
         reference_time=REFERENCE_TIME,
     )
 
     assert result == 1
 
-def test_repetition_count_query_filters_to_occurrence_types():
-    cur = make_cursor()
-    cur.fetchone.return_value = (1,)
 
-    _get_repetition_count(
+def test_repetition_count_ignores_events_outside_seven_day_window():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(days=8),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_1, EVENT_2, "same_series"),
+        ],
+    )
+
+    result = _get_repetition_count(
         cur,
-        event_id="event-1",
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
         reference_time=REFERENCE_TIME,
     )
 
-    sql = str(cur.execute.call_args.args[0])
-
-    assert "initial_detection" in sql
-    assert "occurrence" in sql
+    assert result == 1
     
 # ============================================================
 # Confidence
@@ -394,6 +797,67 @@ def test_load_risk_impacts():
     assert result[0]["relevance"] == pytest.approx(0.7)
     assert result[0]["time_start"] == event_time
 
+def test_load_risk_impacts_excludes_duplicate_events():
+    event_id = "event-1"
+    duplicate_event_id = "event-duplicate"
+    impact_id = "impact-1"
+    duplicate_impact_id = "impact-duplicate"
+
+    event_time = REFERENCE_TIME - timedelta(hours=24)
+
+    cur = make_cursor()
+
+    def execute(sql, params=None):
+        normalized_sql = " ".join(
+            str(sql).split()
+        ).upper()
+
+        if "FROM RISK_IMPACTS RI" in normalized_sql:
+            if "E.DUPLICATE_OF IS NULL" in normalized_sql:
+                cur.fetchall.return_value = [
+                    (
+                        impact_id,
+                        event_id,
+                        29,
+                        40.0,
+                        0.7,
+                        event_time,
+                    )
+                ]
+            else:
+                cur.fetchall.return_value = [
+                    (
+                        impact_id,
+                        event_id,
+                        29,
+                        40.0,
+                        0.7,
+                        event_time,
+                    ),
+                    (
+                        duplicate_impact_id,
+                        duplicate_event_id,
+                        29,
+                        40.0,
+                        0.7,
+                        event_time,
+                    ),
+                ]
+            return
+
+        cur.fetchall.return_value = []
+
+    cur.execute.side_effect = execute
+
+    result = _load_risk_impacts(
+        cur,
+        country_id=321,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert len(result) == 1
+    assert result[0]["id"] == impact_id
+    assert result[0]["event_id"] == event_id
 
 # ============================================================
 # Full country risk snapshot

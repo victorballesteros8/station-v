@@ -107,30 +107,113 @@ def _get_previous_subindicator_score(
 def _get_repetition_count(
     cur: Any,
     event_id: str,
+    country_id: int,
+    subindicator_id: int,
     reference_time: datetime,
 ) -> int:
+    """
+    Returns the repetition position of an event for a specific
+    country/subindicator context.
+
+    Repetition is based on distinct correlated events, not on
+    event_timeline updates.
+
+    Qualifying relations:
+        - same_series
+        - escalation_of
+        - continuation_of
+        - part_of
+
+    Non-qualifying relations such as related, preceded_by and
+    followed_by do not activate repetition reduction.
+
+    Relations are traversed as an undirected graph for repetition
+    purposes, while preserving their semantic direction elsewhere.
+    """
+
     cur.execute(
         """
-        SELECT COUNT(*)
-        FROM event_timeline
-        WHERE event_id = %s
-          AND update_type IN (
-              'initial_detection',
-              'occurrence'
-          )
-          AND timestamp >= %s - INTERVAL '7 days'
-          AND timestamp <= %s
+        WITH RECURSIVE correlated_events AS (
+            SELECT
+                %s::uuid AS event_id,
+                ARRAY[%s::uuid] AS visited
+
+            UNION ALL
+
+            SELECT
+                CASE
+                    WHEN er.event_id = ce.event_id
+                        THEN er.related_event_id
+                    ELSE er.event_id
+                END AS event_id,
+                ce.visited || CASE
+                    WHEN er.event_id = ce.event_id
+                        THEN er.related_event_id
+                    ELSE er.event_id
+                END
+            FROM correlated_events ce
+            JOIN event_relations er
+                ON (
+                    er.event_id = ce.event_id
+                    OR er.related_event_id = ce.event_id
+                )
+            WHERE er.relation_type IN (
+                'same_series',
+                'escalation_of',
+                'continuation_of',
+                'part_of'
+            )
+            AND NOT (
+                CASE
+                    WHEN er.event_id = ce.event_id
+                        THEN er.related_event_id
+                    ELSE er.event_id
+                END = ANY(ce.visited)
+            )
+        ),
+        candidate_events AS (
+            SELECT DISTINCT
+                ce.event_id,
+                ev.time_start
+            FROM correlated_events ce
+            JOIN events e
+                ON e.id = ce.event_id
+            JOIN event_versions ev
+                ON ev.id = e.current_version_id
+            JOIN risk_impacts ri
+                ON ri.event_id = e.id
+            WHERE ri.country_id = %s
+              AND ri.subindicator_id = %s
+              AND ev.time_start IS NOT NULL
+              AND ev.time_start >= %s - INTERVAL '7 days'
+              AND ev.time_start <= %s
+        )
+        SELECT
+            event_id,
+            time_start
+        FROM candidate_events
+        ORDER BY time_start ASC, event_id ASC
         """,
         (
             event_id,
+            event_id,
+            country_id,
+            subindicator_id,
             reference_time,
             reference_time,
         ),
     )
 
-    timeline_count = int(cur.fetchone()[0])
+    related_events = cur.fetchall()
 
-    return max(1, timeline_count)
+    if not related_events:
+        return 1
+
+    for position, row in enumerate(related_events, start=1):
+        if str(row[0]) == str(event_id):
+            return position
+
+    return 1
 
 
 def _calculate_confidence(
@@ -235,6 +318,7 @@ def _load_risk_impacts(
         JOIN event_versions ev
             ON ev.id = e.current_version_id
         WHERE ri.country_id = %s
+          AND e.duplicate_of IS NULL
           AND ev.time_start IS NOT NULL
           AND ev.time_start >= %s - INTERVAL '7 days'
           AND ev.time_start <= %s
@@ -294,6 +378,8 @@ def calculate_country_risk_snapshot(
                 repetition_count = _get_repetition_count(
                     cur,
                     impact["event_id"],
+                    country_id,
+                    impact["subindicator_id"],
                     reference_time,
                 )
 

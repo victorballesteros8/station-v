@@ -86,13 +86,14 @@ def test_ingest_gdacs_creates_source_evidence_and_claim():
             ("source-id",),
             ("evidence-id",),
             ("claim-id",),
+            None,
         ]
 
         result = ingest_gdacs(payload)
 
     assert result == 1
 
-    assert cursor.execute.call_count == 4
+    assert cursor.execute.call_count == 12
 
     calls = cursor.execute.call_args_list
 
@@ -100,6 +101,14 @@ def test_ingest_gdacs_creates_source_evidence_and_claim():
     source_insert_sql = calls[1].args[0]
     evidence_sql = calls[2].args[0]
     claim_sql = calls[3].args[0]
+    event_select_sql = calls[4].args[0]
+    event_insert_sql = calls[5].args[0]
+    event_version_sql = calls[6].args[0]
+    event_update_sql = calls[7].args[0]
+    country_sql = calls[8].args[0]
+    timeline_sql = calls[9].args[0]
+    evidence_event_sql = calls[10].args[0]
+    event_evidence_sql = calls[11].args[0]
 
     assert "SELECT id" in source_select_sql
     assert "FROM sources" in source_select_sql
@@ -108,11 +117,36 @@ def test_ingest_gdacs_creates_source_evidence_and_claim():
     assert "INSERT INTO evidence" in evidence_sql
     assert "INSERT INTO claims" in claim_sql
 
+    assert "SELECT event_id" in event_select_sql
+    assert "FROM evidence" in event_select_sql
+
+    assert "INSERT INTO events" in event_insert_sql
+
+    assert "INSERT INTO event_versions" in event_version_sql
+
+    assert "UPDATE events" in event_update_sql
+    assert "current_version_id" in event_update_sql
+
+    assert "INSERT INTO event_countries" in country_sql
+
+    assert "INSERT INTO event_timeline" in timeline_sql
+
+    assert "UPDATE evidence" in evidence_event_sql
+    assert "event_id" in evidence_event_sql
+
+    assert "UPDATE events" in event_evidence_sql
+    assert "last_evidence_at" in event_evidence_sql
+
     evidence_params = calls[2].args[1]
 
     assert (
         evidence_params["external_id"]
-        == "1562260:1729706"
+        == "1562260"
+    )
+
+    assert (
+        evidence_params["external_episode_id"]
+        == "1729706"
     )
 
     assert (
@@ -171,21 +205,54 @@ def test_ingest_gdacs_uses_existing_source():
             ("existing-source-id",),
             ("evidence-id",),
             ("claim-id",),
+            None,
         ]
 
         result = ingest_gdacs(payload)
 
     assert result == 1
 
-    assert cursor.execute.call_count == 3
+    assert cursor.execute.call_count == 11
 
-    first_sql = (
-        cursor.execute.call_args_list[0]
-        .args[0]
-    )
+    calls = cursor.execute.call_args_list
 
-    assert "SELECT id" in first_sql
-    assert "FROM sources" in first_sql
+    source_select_sql = calls[0].args[0]
+    evidence_sql = calls[1].args[0]
+    claim_sql = calls[2].args[0]
+    event_select_sql = calls[3].args[0]
+    event_insert_sql = calls[4].args[0]
+    event_version_sql = calls[5].args[0]
+    event_update_sql = calls[6].args[0]
+    country_sql = calls[7].args[0]
+    timeline_sql = calls[8].args[0]
+    evidence_event_sql = calls[9].args[0]
+    event_evidence_sql = calls[10].args[0]
+
+    assert "SELECT id" in source_select_sql
+    assert "FROM sources" in source_select_sql
+
+    assert "INSERT INTO evidence" in evidence_sql
+    assert "INSERT INTO claims" in claim_sql
+
+    assert "SELECT event_id" in event_select_sql
+    assert "FROM evidence" in event_select_sql
+
+    assert "INSERT INTO events" in event_insert_sql
+
+    assert "INSERT INTO event_versions" in event_version_sql
+
+    assert "UPDATE events" in event_update_sql
+    assert "current_version_id" in event_update_sql
+
+    assert "INSERT INTO event_countries" in country_sql
+
+    assert "INSERT INTO event_timeline" in timeline_sql
+
+    assert "UPDATE evidence" in evidence_event_sql
+    assert "event_id" in evidence_event_sql
+
+    assert "UPDATE events" in event_evidence_sql
+    assert "last_evidence_at" in event_evidence_sql
 
 
 def test_ingest_gdacs_does_not_fetch_when_payload_is_provided():
@@ -218,6 +285,7 @@ def test_ingest_gdacs_does_not_fetch_when_payload_is_provided():
                 ("source-id",),
                 ("evidence-id",),
                 ("claim-id",),
+                None,
             ]
 
             ingest_gdacs(payload)
@@ -276,6 +344,7 @@ def test_ingest_gdacs_fetches_when_payload_is_missing():
                 ("source-id",),
                 ("evidence-id",),
                 ("claim-id",),
+                None,
             ]
 
             result = ingest_gdacs(

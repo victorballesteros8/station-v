@@ -166,6 +166,7 @@ def test_ingest_usgs_creates_source_and_evidence():
             ("source-id",),
             ("evidence-id",),
             ("claim-id",),
+            None,
         ]
 
         from backend.app.osint.usgs.ingestor import ingest_usgs
@@ -211,6 +212,7 @@ def test_ingest_usgs_does_not_fetch_when_payload_is_provided():
                 ("source-id",),
                 ("evidence-id",),
                 ("claim-id",),
+                None,
             ]
 
             from backend.app.osint.usgs.ingestor import ingest_usgs
