@@ -40,7 +40,10 @@ def _create_event(
     source_name: str,
     title: str,
     summary: str,
+    category: str,
     subtype: str,
+    severity: str,
+    confidence: str,
     time_start: datetime | None,
     latitude: float | None,
     longitude: float | None,
@@ -51,9 +54,6 @@ def _create_event(
     version_id = uuid4()
     detected_at = time_start or datetime.now(timezone.utc)
 
-    # current_version_id has a FK to event_versions.id, so the EVENT must
-    # exist before its first VERSION can be inserted. It is intentionally
-    # created NULL and populated only after the version insert succeeds.
     cur.execute(
         """
         INSERT INTO events (
@@ -98,7 +98,7 @@ def _create_event(
             created_at
         )
         VALUES (
-            %s, %s, 1, 'disaster', %s, %s, %s,
+            %s, %s, 1, %s, %s, %s, %s,
             CASE
                 WHEN %s IS NOT NULL AND %s IS NOT NULL
                 THEN ST_SetSRID(ST_MakePoint(%s, %s), 4326)::geography
@@ -109,8 +109,8 @@ def _create_event(
             %s,
             %s,
             'active',
-            'info',
-            'high',
+            %s,
+            %s,
             %s::jsonb,
             now()
         )
@@ -118,6 +118,7 @@ def _create_event(
         (
             version_id,
             event_id,
+            category,
             subtype,
             title,
             summary,
@@ -129,12 +130,12 @@ def _create_event(
             canonical_data.get("place") or canonical_data.get("event_name"),
             time_start,
             time_precision,
+            severity,
+            confidence,
             json.dumps(canonical_data),
         ),
     )
 
-    # Only now can current_version_id safely reference the newly-created
-    # EVENT VERSION.
     cur.execute(
         """
         UPDATE events
@@ -192,7 +193,10 @@ def resolve_evidence_event(
     external_event_id: str,
     title: str,
     summary: str,
+    category: str,
     subtype: str,
+    severity: str,
+    confidence: str,
     time_start: datetime | None,
     latitude: float | None,
     longitude: float | None,
@@ -220,7 +224,10 @@ def resolve_evidence_event(
             source_name=source_name,
             title=title,
             summary=summary,
+            category=category,
             subtype=subtype,
+            severity=severity,
+            confidence=confidence,
             time_start=time_start,
             latitude=latitude,
             longitude=longitude,
