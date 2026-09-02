@@ -82,11 +82,34 @@ Source-specific structured values may participate in the resolution of STATION V
 
 This resolution is distinct from evidence quality and `Confidence`: a source may provide a high-quality observation without the event necessarily having high severity, and a high-severity event does not imply high Country Risk.
 
-For earthquake ingestion in V1.2, the detailed operational rules are defined in `docs/osint/USGS.md` and `docs/osint/GDACS.md`:
+For earthquake ingestion in V1.2, the detailed operational rules are defined in `docs/osint/USGS.md` and `docs/osint/GDACS.md`.
 
-- USGS uses magnitude as an orientative minimum severity, with objective additional signals such as `alert`, `mmi`, `felt` and `tsunami` able to elevate it but never lower the magnitude-based minimum.
-- GDACS combines its original alert level (`green`, `orange`, `red`) with the same magnitude reference; the highest severity supported by objective signals prevails.
-- USGS and GDACS severity values are not averaged. Independent evidence may support an update to the same EVENT through its versioning mechanism.
+The common rule is:
+
+- magnitude establishes a minimum severity;
+- source-specific alert levels may establish a higher minimum where explicitly defined;
+- objective impact signals may elevate severity;
+- signals are not added together as points;
+- the highest objectively supported severity prevails;
+- a secondary signal never lowers a previously established minimum.
+
+For USGS specifically:
+
+- magnitude maps to `info`, `low`, `medium`, `high` and `critical` by the documented thresholds;
+- PAGER/USGS alert maps to a minimum of `info`, `low`, `medium` or `high` for `green`, `yellow`, `orange` and `red` respectively;
+- MMI VII elevates one level, while MMI VIII or IX+ elevates two levels;
+- `tsunami = 1` elevates one level;
+- `felt` is contextual and does not directly elevate severity in V1.2;
+- `significance` is not used as an independent elevating signal to avoid double-counting a composite source metric.
+
+For GDACS specifically:
+
+- `green`, `orange` and `red` establish minimum severities of `info`, `medium` and `high` respectively;
+- the same magnitude reference is applied;
+- MMI and an explicit tsunami indicator may elevate when those fields are actually available and applicable;
+- any additional objective signal requires an explicit rule before implementation.
+
+USGS and GDACS severity values are not averaged. Independent evidence may support an update to the same EVENT through its versioning mechanism.
 
 These rules are specific to the earthquake pipelines and must not be generalized automatically to other source types or event categories.
 
