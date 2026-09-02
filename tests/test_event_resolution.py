@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import UUID
 
@@ -63,7 +62,7 @@ def test_new_event_uses_incoming_severity():
         for entry in cur.executed
         if "INSERT INTO event_versions" in entry["query"]
     )
-    assert insert["params"][16] == "medium"
+    assert insert["params"][15] == "medium"
 
 
 def test_existing_event_same_severity_does_not_create_version():
@@ -98,7 +97,7 @@ def test_existing_event_higher_severity_creates_version():
 
     assert result == EVENT_ID
     update_event.assert_called_once()
-    update = update_event.call_args.args[2]
+    update = update_event.call_args.kwargs["update"]
     assert update.severity == "high"
     assert update.update_type == "severity_change"
 
