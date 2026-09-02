@@ -89,7 +89,23 @@ La estructura flexible no sustituirá a los campos comunes de `EVIDENCE` ni a la
 
 La magnitud, significancia, alerta y demás campos de USGS son datos de la fuente y no equivalen directamente a `severity`, `Escalation Score` o `Country Risk` de STATION V.
 
-Las reglas de transformación a categorías y severidad deberán definirse antes de activar la generación automática de EVENT para esta fuente.
+### Resolución de severidad V1.2
+
+Para terremotos procedentes de USGS, la magnitud establece una severidad mínima orientativa:
+
+| Magnitud | Severidad mínima |
+|---|---|
+| M < 5,0 | `info` |
+| M 5,0–5,9 | `low` |
+| M 6,0–6,9 | `medium` |
+| M 7,0–7,9 | `high` |
+| M ≥ 8,0 | `critical` |
+
+Los campos objetivos adicionales disponibles en USGS —por ejemplo `alert`, `mmi`, `felt`, `tsunami` y otros parámetros pertinentes— podrán elevar la severidad cuando indiquen consecuencias o relevancia mayores. Nunca se utilizarán para rebajar la severidad mínima derivada de la magnitud.
+
+Esta regla es específica de la ingestión sísmica USGS. No constituye una regla genérica para las ocho categorías de EVENT.
+
+La severidad representa la gravedad del acontecimiento y permanece separada de `Confidence`, `evidence_quality`, número de artículos o número de menciones.
 
 ## Deduplicación
 
@@ -115,6 +131,8 @@ La incorporación de evidencia sísmica al scoring deberá producirse únicament
 
 `EVENT → RISK IMPACT → SUBINDICATOR → DIMENSION → COUNTRY RISK`
 
+Una severidad `high` o `critical` en un terremoto no implica por sí misma un Country Risk alto o crítico.
+
 ## Implementación prevista
 
 La primera implementación deberá centrarse en:
@@ -132,4 +150,4 @@ No se implementará inicialmente un scheduler automático ni impacto sobre Count
 
 ## Revisión
 
-Documento actualizado para definir el almacenamiento de datos específicos de USGS mediante la estructura flexible común de evidencia.
+Documento actualizado a V1.2 para formalizar la resolución específica de severidad de terremotos USGS. La regla queda sujeta a validación con datos reales; cualquier recalibración deberá documentarse antes de modificar la implementación.
