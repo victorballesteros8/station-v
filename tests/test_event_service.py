@@ -53,9 +53,13 @@ class FakeCursor:
 class FakeConnection:
     def __init__(self, current_event):
         self.cursor_instance = FakeCursor(current_event)
+        self.commit_calls = 0
 
     def cursor(self):
         return self.cursor_instance
+
+    def commit(self):
+        self.commit_calls += 1
 
     def __enter__(self):
         return self
@@ -168,6 +172,8 @@ def test_update_event_creates_new_version_and_timeline_entry():
         "INSERT INTO event_timeline" in query
         for query in queries
     )
+
+    assert connection.commit_calls == 1
 
 
 def test_update_event_preserves_unchanged_fields():
@@ -321,3 +327,4 @@ def test_update_event_updates_current_version():
 
     assert update_query["params"][0] != CURRENT_VERSION_ID
     assert update_query["params"][2] == EVENT_ID
+    assert connection.commit_calls == 1
