@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import UUID
 
@@ -81,7 +80,6 @@ def make_current_event(
     return (
         EVENT_ID,
         CURRENT_VERSION_ID,
-        REFERENCE_TIME,
         version,
         category,
         subtype,
@@ -221,6 +219,7 @@ def test_update_event_preserves_unchanged_fields():
     assert params[16] == "low"
     assert params[17] is None
     assert params[18] == "high"
+
 
 def test_occurrence_creates_timeline_entry():
     connection = FakeConnection(make_current_event(version=2))
