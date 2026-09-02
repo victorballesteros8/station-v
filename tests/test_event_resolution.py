@@ -62,7 +62,7 @@ def test_new_event_uses_incoming_severity():
         for entry in cur.executed
         if "INSERT INTO event_versions" in entry["query"]
     )
-    assert insert["params"][15] == "medium"
+    assert insert["params"][14] == "medium"
 
 
 def test_existing_event_same_severity_does_not_create_version():
