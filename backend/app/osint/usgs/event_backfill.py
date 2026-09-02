@@ -4,8 +4,8 @@ from datetime import datetime
 from typing import Any
 
 from backend.app.db import get_connection
+from backend.app.osint.earthquake_severity import resolve_usgs_earthquake_severity
 from backend.app.services.event_resolution import resolve_evidence_event
-
 
 USGS_SOURCE_NAME = "USGS"
 
@@ -88,6 +88,10 @@ def backfill_usgs_events() -> int:
                 if not isinstance(place, str) or not place:
                     place = title or external_event_id
 
+                severity = resolve_usgs_earthquake_severity(
+                    structured_data
+                )
+
                 resolve_evidence_event(
                     cur,
                     evidence_id=str(evidence_id),
@@ -96,7 +100,10 @@ def backfill_usgs_events() -> int:
                     external_event_id=str(external_event_id),
                     title=place,
                     summary=f"USGS earthquake: {place}",
+                    category="disaster",
                     subtype="earthquake",
+                    severity=severity,
+                    confidence="high",
                     time_start=event_time,
                     latitude=_to_float_or_none(
                         structured_data.get("latitude")
