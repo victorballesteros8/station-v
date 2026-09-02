@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+﻿from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -104,8 +104,8 @@ def configure_snapshot_cursor(
         if "WITH RECURSIVE CORRELATED_EVENTS" in normalized_sql:
             qualifying_relations = {
                 "same_series",
-                "escalation_of",
-                "continuation_of",
+                "escalates",
+                "same_series",
                 "part_of",
             }
 
@@ -320,7 +320,7 @@ def test_repetition_count_counts_escalation_relation():
             ),
         ],
         relations=[
-            (EVENT_2, EVENT_1, "escalation_of"),
+            (EVENT_2, EVENT_1, "escalates"),
         ],
     )
 
@@ -349,7 +349,7 @@ def test_repetition_count_counts_continuation_relation():
             ),
         ],
         relations=[
-            (EVENT_2, EVENT_1, "continuation_of"),
+            (EVENT_2, EVENT_1, "same_series"),
         ],
     )
 
@@ -407,7 +407,7 @@ def test_repetition_count_counts_escalation_relation():
             ),
         ],
         relations=[
-            (EVENT_2, EVENT_1, "escalation_of"),
+            (EVENT_2, EVENT_1, "escalates"),
         ],
     )
 
@@ -436,7 +436,7 @@ def test_repetition_count_counts_continuation_relation():
             ),
         ],
         relations=[
-            (EVENT_2, EVENT_1, "continuation_of"),
+            (EVENT_2, EVENT_1, "same_series"),
         ],
     )
 
@@ -494,7 +494,7 @@ def test_repetition_count_does_not_reduce_for_non_qualifying_related_relation():
             ),
         ],
         relations=[
-            (EVENT_1, EVENT_2, "related"),
+            (EVENT_1, EVENT_2, "related_to"),
         ],
     )
 
@@ -538,6 +538,63 @@ def test_repetition_count_does_not_reduce_for_temporal_relation():
     assert result == 1
 
 
+def test_repetition_count_does_not_reduce_for_followed_by_relation():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_1, EVENT_2, "followed_by"),
+        ],
+    )
+
+    result = _get_repetition_count(
+        cur,
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert result == 1
+
+
+def test_repetition_count_does_not_reduce_for_caused_by_relation():
+    cur = configure_snapshot_cursor(
+        dimensions=[],
+        impacts=[
+            (
+                EVENT_2,
+                REFERENCE_TIME - timedelta(hours=12),
+            ),
+            (
+                EVENT_1,
+                REFERENCE_TIME,
+            ),
+        ],
+        relations=[
+            (EVENT_1, EVENT_2, "caused_by"),
+        ],
+    )
+
+    result = _get_repetition_count(
+        cur,
+        event_id=EVENT_1,
+        country_id=1,
+        subindicator_id=1,
+        reference_time=REFERENCE_TIME,
+    )
+
+    assert result == 1
+
 def test_repetition_count_traverses_relation_chain():
     cur = configure_snapshot_cursor(
         dimensions=[],
@@ -557,7 +614,7 @@ def test_repetition_count_traverses_relation_chain():
         ],
         relations=[
             (EVENT_1, EVENT_2, "same_series"),
-            (EVENT_2, EVENT_3, "continuation_of"),
+            (EVENT_2, EVENT_3, "same_series"),
         ],
     )
 
@@ -1269,3 +1326,4 @@ def test_global_risk_coverage_status_operational_at_boundary():
 
 def test_global_risk_coverage_status_operational_above_boundaries():
     assert _get_global_risk_coverage_status(100.0, 100.0) == "operational"
+

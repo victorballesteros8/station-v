@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -120,8 +120,8 @@ def _get_repetition_count(
 
     Qualifying relations:
         - same_series
-        - escalation_of
-        - continuation_of
+        - escalates
+        - same_series
         - part_of
 
     Non-qualifying relations such as related, preceded_by and
@@ -159,8 +159,8 @@ def _get_repetition_count(
                 )
             WHERE er.relation_type IN (
                 'same_series',
-                'escalation_of',
-                'continuation_of',
+                'escalates',
+                'same_series',
                 'part_of'
             )
             AND NOT (
