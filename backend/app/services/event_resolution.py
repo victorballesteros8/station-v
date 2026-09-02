@@ -4,6 +4,9 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
+from backend.app.schemas.events import EventUpdate
+from backend.app.services.event_service import _update_event_with_cursor
+
 
 # V1 deliberately resolves deterministic source identities first. Heuristic
 # cross-source matching is kept out of this service until source-specific
@@ -32,6 +35,16 @@ def _find_existing_event(
     )
     row = cur.fetchone()
     return UUID(str(row[0])) if row is not None else None
+
+
+def _severity_rank(value: str) -> int:
+    return {
+        "info": 0,
+        "low": 1,
+        "medium": 2,
+        "high": 3,
+        "critical": 4,
+    }[value]
 
 
 def _create_event(
@@ -139,9 +152,7 @@ def _create_event(
     cur.execute(
         """
         UPDATE events
-        SET
-            current_version_id = %s,
-            updated_at = now()
+        SET current_version_id = %s, updated_at = now()
         WHERE id = %s
         """,
         (version_id, event_id),
@@ -206,8 +217,9 @@ def resolve_evidence_event(
     """Resolve one structured Evidence against a STATION V EVENT.
 
     V1 uses deterministic source identity only. Repeated observations from
-    the same source event are attached to the existing EVENT. Ambiguous
-    cross-source matches are intentionally not guessed here.
+    the same source event are attached to the existing EVENT. If a repeated
+    source observation resolves to a higher severity, the existing EVENT is
+    versioned through Event Service rather than duplicated.
     """
     existing_event_id = _find_existing_event(
         cur,
@@ -234,6 +246,34 @@ def resolve_evidence_event(
             canonical_data=canonical_data,
             country_iso3=country_iso3,
         )
+    else:
+        cur.execute(
+            """
+            SELECT ev.severity
+            FROM events e
+            JOIN event_versions ev
+                ON ev.id = e.current_version_id
+            WHERE e.id = %s
+            FOR UPDATE
+            """,
+            (event_id,),
+        )
+        row = cur.fetchone()
+        current_severity = str(row[0]) if row is not None else "info"
+
+        if _severity_rank(severity) > _severity_rank(current_severity):
+            _update_event_with_cursor(
+                cur,
+                event_id=event_id,
+                update=EventUpdate(
+                    severity=severity,
+                    update_type="severity_change",
+                    description=(
+                        f"Severidad actualizada de {current_severity} a {severity} "
+                        f"por nueva evidencia de {source_name}."
+                    ),
+                ),
+            )
 
     cur.execute(
         """
