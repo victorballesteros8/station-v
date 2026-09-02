@@ -91,7 +91,7 @@ La magnitud, significancia, alerta y demás campos de USGS son datos de la fuent
 
 ### Resolución de severidad V1.2
 
-Para terremotos procedentes de USGS, la magnitud establece una severidad mínima orientativa:
+Para terremotos procedentes de USGS, la magnitud establece una severidad mínima:
 
 | Magnitud | Severidad mínima |
 |---|---|
@@ -101,7 +101,17 @@ Para terremotos procedentes de USGS, la magnitud establece una severidad mínima
 | M 7,0–7,9 | `high` |
 | M ≥ 8,0 | `critical` |
 
-Los campos objetivos adicionales disponibles en USGS —por ejemplo `alert`, `mmi`, `felt`, `tsunami` y otros parámetros pertinentes— podrán elevar la severidad cuando indiquen consecuencias o relevancia mayores. Nunca se utilizarán para rebajar la severidad mínima derivada de la magnitud.
+La resolución final utilizará señales objetivas adicionales cuando estén disponibles. La severidad será la mayor respaldada por las señales aplicables; ninguna señal secundaria podrá rebajar la severidad mínima establecida por la magnitud.
+
+#### Señales adicionales
+
+- **Alerta USGS/PAGER (`alert`)**: cuando exista un nivel explícito, se utilizará como señal objetiva de impacto. La referencia mínima será `green` → `info`, `yellow` → `low`, `orange` → `medium`, `red` → `high`. No reduce la referencia derivada de la magnitud.
+- **MMI (`mmi`)**: se utilizará como señal objetiva de intensidad/impacto. `MMI < VII` no eleva; `MMI VII` eleva un nivel; `MMI VIII` eleva dos niveles; `MMI IX o superior` eleva dos niveles. La elevación se limita a `critical` como máximo.
+- **Tsunami (`tsunami = 1`)**: eleva un nivel respecto de la severidad mínima ya calculada. No implica por sí mismo una clasificación `critical`.
+- **`felt`**: no eleva directamente la severidad en V1.2. Se conserva como evidencia contextual y no se convierte en un umbral de gravedad.
+- **`significance` (`sig`)**: no se utilizará como elevador independiente. Es una métrica compuesta de USGS y su reutilización como señal adicional podría duplicar información ya representada por otras variables.
+
+No se sumarán puntos entre señales. Cada señal propone, cuando corresponda, un nivel mínimo o una elevación, y prevalece el nivel más alto objetivamente respaldado.
 
 Esta regla es específica de la ingestión sísmica USGS. No constituye una regla genérica para las ocho categorías de EVENT.
 
