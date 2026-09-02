@@ -12,6 +12,7 @@ from backend.app.osint.common.claim_persistence import (
 from backend.app.osint.common.evidence_persistence import (
     upsert_evidence,
 )
+from backend.app.osint.earthquake_severity import resolve_usgs_earthquake_severity
 from backend.app.osint.usgs.claim_builder import build_usgs_claim
 from backend.app.osint.usgs.client import fetch_usgs_feed
 from backend.app.osint.usgs.normalizer import (
@@ -190,6 +191,15 @@ def ingest_usgs(payload: dict[str, Any] | None = None) -> int:
                 claim = build_usgs_claim(earthquake)
                 _persist_claim(cur, evidence_id, claim)
 
+                severity = resolve_usgs_earthquake_severity(
+                    {
+                        "magnitude": earthquake.magnitude,
+                        "alert": earthquake.alert,
+                        "mmi": earthquake.mmi,
+                        "tsunami": earthquake.tsunami,
+                    }
+                )
+
                 resolve_evidence_event(
                     cur,
                     evidence_id=evidence_id,
@@ -198,7 +208,10 @@ def ingest_usgs(payload: dict[str, Any] | None = None) -> int:
                     external_event_id=earthquake.external_id,
                     title=earthquake.place or "Earthquake detected by USGS",
                     summary=claim.statement,
+                    category="disaster",
                     subtype="earthquake",
+                    severity=severity,
+                    confidence=claim.confidence,
                     time_start=earthquake.time,
                     latitude=earthquake.latitude,
                     longitude=earthquake.longitude,
