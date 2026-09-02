@@ -502,7 +502,9 @@ high
 critical
 ```
 
-La severidad representa impacto/riesgo del acontecimiento.
+La severidad representa la gravedad o importancia del acontecimiento en sí.
+
+No representa directamente su impacto sobre Country Risk ni su potencial de escalada.
 
 ### 13.5 Escalation Score
 
