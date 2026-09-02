@@ -76,6 +76,20 @@ Connector-specific code is responsible for converting the source payload into th
 
 The generic evidence persistence layer is responsible for storing that representation and its common provenance metadata.
 
+## Source-specific severity resolution
+
+Source-specific structured values may participate in the resolution of STATION V `severity` when an explicit rule has been defined for that source and event type.
+
+This resolution is distinct from evidence quality and `Confidence`: a source may provide a high-quality observation without the event necessarily having high severity, and a high-severity event does not imply high Country Risk.
+
+For earthquake ingestion in V1.2, the detailed operational rules are defined in `docs/osint/USGS.md` and `docs/osint/GDACS.md`:
+
+- USGS uses magnitude as an orientative minimum severity, with objective additional signals such as `alert`, `mmi`, `felt` and `tsunami` able to elevate it but never lower the magnitude-based minimum.
+- GDACS combines its original alert level (`green`, `orange`, `red`) with the same magnitude reference; the highest severity supported by objective signals prevails.
+- USGS and GDACS severity values are not averaged. Independent evidence may support an update to the same EVENT through its versioning mechanism.
+
+These rules are specific to the earthquake pipelines and must not be generalized automatically to other source types or event categories.
+
 ## Future evolution
 
 The structured evidence model is intended to support additional sources such as GDACS, GDELT, UCDP, ReliefWeb and NASA FIRMS without redesigning the core `SOURCE → EVIDENCE → CLAIM → EVENT` chain.
