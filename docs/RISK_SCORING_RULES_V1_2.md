@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document makes the V1.2 risk-scoring rules operational for implementation. It does not replace the mathematical methodology; it specifies the event-relation semantics required by the scoring layer.
+This document makes the V1.2 risk-scoring rules operational for implementation. It does not replace the mathematical methodology; it specifies the event-relation semantics required by the scoring layer and is aligned with the canonical relation catalogue defined by Event Model V1.3.
 
 ## 2. Event repetition is event-to-event
 
@@ -26,24 +26,23 @@ An event may therefore have a different repetition weight for different countrie
 
 ## 3. Event relation types
 
-The V1 event relation catalogue explicitly distinguishes:
+The V1.3 event relation catalogue explicitly distinguishes:
 
 - `same_series`: distinct events belonging to the same recurring or continuing series/phenomenon;
-- `escalation_of`: the event represents an escalation of another distinct event;
-- `continuation_of`: the event continues the same underlying phenomenon as another distinct event;
+- `escalates`: the event represents an escalation of another distinct event;
 - `part_of`: the event is materially part of the same larger phenomenon, when that relationship is analytically justified;
-- `duplicate_of`: the event is a duplicate representation of an existing event;
-- `related`: events are related but not sufficiently correlated to establish repetition;
+- `caused_by`: there is sufficient evidence of a causal relationship between the events;
+- `related_to`: events are related but not sufficiently correlated to establish repetition;
 - `preceded_by`: temporal precedence only;
-- `followed_by`: temporal succession only.
+- `followed_by`: temporal succession only;
+- `duplicate_of`: the event is a duplicate representation of an existing event.
 
 ## 4. Relations that can activate repetition reduction
 
 The following relations may establish repetition:
 
 - `same_series`
-- `escalation_of`
-- `continuation_of`
+- `escalates`
 - `part_of`
 
 They activate repetition reduction only when all of the following are true:
@@ -55,15 +54,16 @@ They activate repetition reduction only when all of the following are true:
 5. the related event falls within the seven-day calculation context;
 6. ordering is based on the underlying event occurrence time, not publication time.
 
-`escalation_of` may receive a higher base impact because the later event is more severe or intense; the repetition multiplier is applied independently.
+`escalates` may receive a higher base impact because the later event is more severe or intense; the repetition multiplier is applied independently.
 
 ## 5. Relations that do not activate repetition by themselves
 
 The following relations do not activate repetition reduction by themselves:
 
-- `related`
+- `related_to`
 - `preceded_by`
 - `followed_by`
+- `caused_by`
 
 They may provide analytical context but are insufficient to infer repeated risk contribution.
 
