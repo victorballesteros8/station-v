@@ -133,7 +133,7 @@ No se interpretará automáticamente una geometría de impacto como prueba de qu
 
 La geometría deberá conservar su procedencia y significado original.
 
-## 9. Nivel de alerta
+## 9. Nivel de alerta y resolución de severidad V1.2
 
 GDACS utiliza niveles de alerta, incluyendo:
 
@@ -145,15 +145,31 @@ red
 
 STATION V conservará el nivel original de GDACS.
 
-No se realizará una conversión automática de:
+Para terremotos, el nivel de alerta se utilizará junto con la magnitud para resolver la `severity` del EVENT. No se realizará una conversión directa del nivel GDACS a `Country Risk`.
 
-```text
-green → riesgo bajo
-orange → riesgo alto
-red → riesgo crítico
-```
+La referencia mínima por nivel de alerta será:
 
-porque el nivel GDACS representa una evaluación específica de la alerta de desastre y no es equivalente al `Country Risk` ni al `Global Risk` de STATION V.
+| Nivel GDACS | Severidad mínima |
+|---|---|
+| `green` | `info` |
+| `orange` | `medium` |
+| `red` | `high` |
+
+También se aplican las referencias orientativas de magnitud:
+
+| Magnitud | Severidad mínima |
+|---|---|
+| M < 5,0 | `info` |
+| M 5,0–5,9 | `low` |
+| M 6,0–6,9 | `medium` |
+| M 7,0–7,9 | `high` |
+| M ≥ 8,0 | `critical` |
+
+La severidad resultante será la mayor respaldada por las señales objetivas disponibles. Nuevas señales de impacto objetivas podrán elevarla, pero nunca reducir la referencia mínima ya establecida.
+
+Las severidades USGS y GDACS no se promediarán. Cada fuente evalúa su propia evidencia. Una fuente independiente puede aportar evidencia para actualizar la severidad del mismo EVENT mediante una nueva versión, conservando la trazabilidad de la evaluación anterior.
+
+Esta regla es específica de la ingestión sísmica GDACS y no constituye una regla genérica para todas las categorías de desastre.
 
 ## 10. EVIDENCE
 
@@ -200,6 +216,8 @@ CLAIM
   ↓
 EVENT
 ```
+
+Cuando un EVENT ya existente reciba nueva evidencia independiente de GDACS que sustente una severidad superior, la actualización deberá realizarse mediante el mecanismo de versionado del EVENT y no creando un segundo EVENT para el mismo acontecimiento.
 
 ## 13. Relación con USGS
 
