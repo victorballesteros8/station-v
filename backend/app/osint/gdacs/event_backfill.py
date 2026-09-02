@@ -38,12 +38,12 @@ def _to_float_or_none(value: Any) -> float | None:
 
 
 def backfill_gdacs_events() -> int:
-    """Resolve pending GDACS Evidence into deterministic STATION V EVENTs.
+    """Resolve GDACS Evidence and ensure their RiskImpacts are assigned.
 
-    Only Evidence without an event_id is processed. Event identity is left
-    entirely to the shared V1 event-resolution service, which uses the
-    deterministic GDACS source identity (external_id) and performs no
-    heuristic cross-source matching.
+    The operation is deliberately rerunnable: Evidence already linked to an
+    EVENT is not resolved again, but its EVENT is still passed through the
+    RiskImpact assignment step. This is necessary because Event Resolution
+    and RiskImpact assignment are separate, idempotent stages.
     """
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -55,12 +55,12 @@ def backfill_gdacs_events() -> int:
                     e.external_id,
                     e.title,
                     e.published_at,
-                    e.structured_data
+                    e.structured_data,
+                    e.event_id
                 FROM evidence e
                 JOIN sources s
                     ON s.id = e.source_id
                 WHERE s.name = %s
-                  AND e.event_id IS NULL
                 ORDER BY e.retrieved_at, e.id
                 """,
                 (GDACS_SOURCE_NAME,),
@@ -78,6 +78,7 @@ def backfill_gdacs_events() -> int:
                     title,
                     published_at,
                     structured_data,
+                    existing_event_id,
                 ) = row
 
                 if not isinstance(structured_data, dict):
@@ -85,62 +86,67 @@ def backfill_gdacs_events() -> int:
                         f"GDACS evidence {evidence_id} has invalid structured_data"
                     )
 
-                event_time = _parse_datetime(
-                    structured_data.get("event_time")
-                ) or published_at
+                if existing_event_id is not None:
+                    event_id = str(existing_event_id)
+                else:
+                    event_time = _parse_datetime(
+                        structured_data.get("event_time")
+                    ) or published_at
 
-                event_name = structured_data.get("event_name")
-                country = structured_data.get("country")
-                if not isinstance(event_name, str) or not event_name:
-                    event_name = title or (
-                        f"Earthquake in {country}"
-                        if isinstance(country, str) and country
-                        else external_event_id
+                    event_name = structured_data.get("event_name")
+                    country = structured_data.get("country")
+                    if not isinstance(event_name, str) or not event_name:
+                        event_name = title or (
+                            f"Earthquake in {country}"
+                            if isinstance(country, str) and country
+                            else external_event_id
+                        )
+
+                    magnitude = structured_data.get("magnitude")
+                    alert_level = structured_data.get("alert_level")
+                    severity = resolve_gdacs_earthquake_severity(
+                        {
+                            "magnitude": magnitude,
+                            "alert_level": alert_level,
+                        }
                     )
 
-                magnitude = structured_data.get("magnitude")
-                alert_level = structured_data.get("alert_level")
-                severity = resolve_gdacs_earthquake_severity(
-                    {
-                        "magnitude": magnitude,
-                        "alert_level": alert_level,
-                    }
-                )
-
-                event_id = resolve_evidence_event(
-                    cur,
-                    evidence_id=str(evidence_id),
-                    source_id=str(source_id),
-                    source_name=GDACS_SOURCE_NAME,
-                    external_event_id=str(external_event_id),
-                    title=event_name,
-                    summary=(
-                        f"GDACS earthquake: {event_name}"
-                    ),
-                    category="disaster",
-                    subtype="earthquake",
-                    severity=severity,
-                    confidence="high",
-                    time_start=event_time,
-                    latitude=_to_float_or_none(
-                        structured_data.get("latitude")
-                    ),
-                    longitude=_to_float_or_none(
-                        structured_data.get("longitude")
-                    ),
-                    country_iso3=(
-                        str(structured_data["country_iso3"])
-                        if structured_data.get("country_iso3")
-                        else None
-                    ),
-                    canonical_data=structured_data,
-                )
+                    event_id = str(
+                        resolve_evidence_event(
+                            cur,
+                            evidence_id=str(evidence_id),
+                            source_id=str(source_id),
+                            source_name=GDACS_SOURCE_NAME,
+                            external_event_id=str(external_event_id),
+                            title=event_name,
+                            summary=(
+                                f"GDACS earthquake: {event_name}"
+                            ),
+                            category="disaster",
+                            subtype="earthquake",
+                            severity=severity,
+                            confidence="high",
+                            time_start=event_time,
+                            latitude=_to_float_or_none(
+                                structured_data.get("latitude")
+                            ),
+                            longitude=_to_float_or_none(
+                                structured_data.get("longitude")
+                            ),
+                            country_iso3=(
+                                str(structured_data["country_iso3"])
+                                if structured_data.get("country_iso3")
+                                else None
+                            ),
+                            canonical_data=structured_data,
+                        )
+                    )
+                    resolved += 1
 
                 impacts_assigned += assign_event_risk_impacts(
                     cur,
-                    str(event_id),
+                    event_id,
                 )
-                resolved += 1
 
         conn.commit()
 
