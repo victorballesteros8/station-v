@@ -969,6 +969,21 @@ La actualización programada tampoco implica que la ausencia de nuevos datos equ
 
 La persistencia de consecuencias derivadas de acontecimientos graves más allá de la ventana temporal definida por la metodología V1 queda fuera de esta política y podrá revisarse como evolución metodológica posterior.
 
+### 19.4 Ejecución del ciclo programado V1
+
+La actualización programada de Country Risk se ejecutará mediante un proceso backend independiente de la API HTTP.
+
+El proceso deberá:
+
+- ejecutarse con una única instancia activa;
+- iniciar una ejecución cada 6 horas;
+- utilizar la política de selección de países definida en 19.3;
+- ejecutar el cálculo de Country Risk de forma independiente para cada país seleccionado;
+- permitir que un error puntual en un país no impida procesar los demás países seleccionados;
+- generar los snapshots correspondientes a los cálculos completados correctamente.
+
+La implementación concreta del mecanismo de planificación queda abierta en V1 y no requiere una tecnología específica de scheduler o sistema de colas.
+
 ## 20. Dimensiones
 
 ### 20.1 Internal Instability
