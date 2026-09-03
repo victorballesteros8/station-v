@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 from psycopg.types.json import Jsonb
@@ -14,15 +14,18 @@ from backend.app.osint.common.evidence_persistence import (
 )
 from backend.app.osint.earthquake_severity import resolve_gdacs_earthquake_severity
 from backend.app.osint.gdacs.claim_builder import build_gdacs_claim
-from backend.app.osint.gdacs.client import fetch_gdacs_events
+from backend.app.osint.gdacs.client import (
+    fetch_gdacs_event,
+    fetch_gdacs_events,
+)
 from backend.app.osint.gdacs.normalizer import (
     GDACSEarthquake,
+    normalize_gdacs_feature,
     normalize_gdacs_feed,
 )
 from backend.app.services.event_resolution import (
     resolve_evidence_event,
 )
-
 
 GDACS_SOURCE_NAME = "GDACS"
 
@@ -124,6 +127,8 @@ def _build_structured_data(earthquake: GDACSEarthquake) -> Jsonb:
             "event_type": earthquake.event_type,
             "alert_level": earthquake.alert_level,
             "alert_score": earthquake.alert_score,
+            "episode_alert_level": earthquake.episode_alert_level,
+            "episode_alert_score": earthquake.episode_alert_score,
             "event_name": earthquake.event_name,
             "country": earthquake.country,
             "country_iso3": earthquake.country_iso3,
@@ -186,6 +191,80 @@ def _upsert_evidence(
     )
 
 
+
+def _persist_gdacs_earthquake(
+    cur: Any,
+    source_id: str,
+    earthquake: GDACSEarthquake,
+    retrieved_at: datetime,
+) -> str:
+    evidence_id = _upsert_evidence(
+        cur,
+        source_id,
+        earthquake,
+        retrieved_at,
+    )
+
+    claim = build_gdacs_claim(earthquake)
+    _persist_claim(cur, evidence_id, claim)
+
+    severity = resolve_gdacs_earthquake_severity(
+        {
+            "magnitude": earthquake.magnitude,
+            "alert_level": earthquake.alert_level,
+        }
+    )
+
+    resolve_evidence_event(
+        cur,
+        evidence_id=evidence_id,
+        source_id=source_id,
+        source_name=GDACS_SOURCE_NAME,
+        external_event_id=earthquake.event_id,
+        title=(
+            earthquake.event_name
+            or (
+                f"Earthquake in {earthquake.country}"
+                if earthquake.country
+                else "GDACS earthquake alert"
+            )
+        ),
+        summary=claim.statement,
+        category="disaster",
+        subtype="earthquake",
+        severity=severity,
+        confidence=claim.confidence,
+        time_start=earthquake.event_time,
+        latitude=earthquake.latitude,
+        longitude=earthquake.longitude,
+        country_iso3=earthquake.country_iso3,
+        canonical_data={
+            "provider": "GDACS",
+            "external_event_id": earthquake.event_id,
+            "external_episode_id": earthquake.episode_id,
+            "event_type": earthquake.event_type,
+            "update_time": (
+                earthquake.update_time.isoformat()
+                if earthquake.update_time is not None
+                else None
+            ),
+            "alert_level": earthquake.alert_level,
+            "alert_score": earthquake.alert_score,
+            "episode_alert_level": earthquake.episode_alert_level,
+            "episode_alert_score": earthquake.episode_alert_score,
+            "event_name": earthquake.event_name,
+            "country": earthquake.country,
+            "country_iso3": earthquake.country_iso3,
+            "latitude": earthquake.latitude,
+            "longitude": earthquake.longitude,
+            "magnitude": earthquake.magnitude,
+            "depth": earthquake.depth,
+        },
+    )
+
+    return evidence_id
+
+
 def ingest_gdacs(
     payload: dict[str, Any] | None = None,
     *,
@@ -213,63 +292,94 @@ def ingest_gdacs(
             source_id = _get_or_create_source(cur)
 
             for earthquake in earthquakes:
-                evidence_id = _upsert_evidence(
+                _persist_gdacs_earthquake(
                     cur,
                     source_id,
                     earthquake,
                     retrieved_at,
                 )
 
-                claim = build_gdacs_claim(earthquake)
-                _persist_claim(cur, evidence_id, claim)
-
-                severity = resolve_gdacs_earthquake_severity(
-                    {
-                        "magnitude": earthquake.magnitude,
-                        "alert_level": earthquake.alert_level,
-                    }
-                )
-
-                resolve_evidence_event(
-                    cur,
-                    evidence_id=evidence_id,
-                    source_id=source_id,
-                    source_name=GDACS_SOURCE_NAME,
-                    external_event_id=earthquake.event_id,
-                    title=(
-                        earthquake.event_name
-                        or (
-                            f"Earthquake in {earthquake.country}"
-                            if earthquake.country
-                            else "GDACS earthquake alert"
-                        )
-                    ),
-                    summary=claim.statement,
-                    category="disaster",
-                    subtype="earthquake",
-                    severity=severity,
-                    confidence=claim.confidence,
-                    time_start=earthquake.event_time,
-                    latitude=earthquake.latitude,
-                    longitude=earthquake.longitude,
-                    country_iso3=earthquake.country_iso3,
-                    canonical_data={
-                        "provider": "GDACS",
-                        "external_event_id": earthquake.event_id,
-                        "external_episode_id": earthquake.episode_id,
-                        "event_type": earthquake.event_type,
-                        "alert_level": earthquake.alert_level,
-                        "alert_score": earthquake.alert_score,
-                        "event_name": earthquake.event_name,
-                        "country": earthquake.country,
-                        "country_iso3": earthquake.country_iso3,
-                        "latitude": earthquake.latitude,
-                        "longitude": earthquake.longitude,
-                        "magnitude": earthquake.magnitude,
-                        "depth": earthquake.depth,
-                    },
-                )
-
         conn.commit()
 
     return len(earthquakes)
+
+
+def ingest_gdacs_discovery(
+    *,
+    from_date: date,
+    to_date: date,
+    event_type: str = "EQ",
+) -> dict[str, int]:
+    payload = fetch_gdacs_events(
+        from_date=from_date,
+        to_date=to_date,
+        event_type=event_type,
+    )
+
+    features = payload.get("features")
+
+    if not isinstance(features, list):
+        raise ValueError(
+            "GDACS Discovery response has no valid features list"
+        )
+
+    event_ids: list[str] = []
+
+    for feature in features:
+        earthquake = normalize_gdacs_feature(feature)
+
+        if earthquake.event_id not in event_ids:
+            event_ids.append(earthquake.event_id)
+
+    discovered = len(event_ids)
+    refreshed = 0
+    failed = 0
+    retrieved_at = datetime.now(timezone.utc)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            source_id = _get_or_create_source(cur)
+
+            for event_id in event_ids:
+                cur.execute("SAVEPOINT gdacs_refresh")
+
+                try:
+                    detail = fetch_gdacs_event(
+                        event_id=event_id,
+                        event_type=event_type,
+                    )
+
+                    earthquake = normalize_gdacs_feature(detail)
+
+                    _persist_gdacs_earthquake(
+                        cur,
+                        source_id,
+                        earthquake,
+                        retrieved_at,
+                    )
+
+                    refreshed += 1
+
+                    cur.execute("RELEASE SAVEPOINT gdacs_refresh")
+
+                except Exception as exc:
+                    cur.execute(
+                        "ROLLBACK TO SAVEPOINT gdacs_refresh"
+                    )
+                    cur.execute(
+                        "RELEASE SAVEPOINT gdacs_refresh"
+                    )
+
+                    failed += 1
+                    print(
+                        f"GDACS Refresh failed for event_id={event_id}: "
+                        f"{exc}"
+                    )
+
+        conn.commit()
+
+    return {
+        "discovered": discovered,
+        "refreshed": refreshed,
+        "failed": failed,
+    }

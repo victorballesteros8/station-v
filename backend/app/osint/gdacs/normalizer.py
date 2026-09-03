@@ -17,6 +17,8 @@ class GDACSEarthquake:
     event_type: str
     alert_level: str | None
     alert_score: float | None
+    episode_alert_level: str | None
+    episode_alert_score: float | None
 
     event_name: str | None
     country: str | None
@@ -320,6 +322,12 @@ def normalize_gdacs_feature(
         ),
         alert_score=_number_or_none(
             properties.get("alertscore")
+        ),
+        episode_alert_level=_string_or_none(
+            properties.get("episodealertlevel")
+        ),
+        episode_alert_score=_number_or_none(
+            properties.get("episodealertscore")
         ),
         event_name=event_name,
         country=country,
