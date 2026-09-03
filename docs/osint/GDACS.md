@@ -108,6 +108,20 @@ Las consultas de Discovery deberán mantenerse acotadas y la implementación deb
 
 La estrategia de Refresh deberá ser selectiva y no depender de una única consulta histórica de gran amplitud.
 
+### 5.4 Fallo durante Refresh
+
+Si un `geteventdata` utilizado para refrescar un EVENT conocido falla:
+
+- se conservará la EVIDENCE existente;
+- no se sobrescribirán datos válidos con valores incompletos;
+- no se creará una nueva EVIDENCE únicamente por el fallo de consulta;
+- el EVENT seguirá disponible para futuros intentos de Refresh;
+- el fallo de un EVENT no deberá impedir continuar con el procesamiento de los demás EVENTs seleccionados.
+
+La actualización deberá ser idempotente y cada operación completada correctamente deberá dejar el estado persistido de forma consistente.
+
+Un fallo temporal de la API no se interpretará como desaparición, finalización o invalidación del EVENT.
+
 ## 6. Consulta inicial
 
 La integración utilizará consultas de búsqueda sobre un intervalo temporal acotado.
