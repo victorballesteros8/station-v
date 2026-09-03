@@ -108,7 +108,15 @@ Las consultas de Discovery deberán mantenerse acotadas y la implementación deb
 
 La estrategia de Refresh deberá ser selectiva y no depender de una única consulta histórica de gran amplitud.
 
-### 5.4 Fallo durante Refresh
+### 5.4 Respuesta vacía de Discovery
+
+Si `geteventlist/SEARCH` devuelve una respuesta JSON vacía (`{}`) tras una petición HTTP satisfactoria, se tratará como una respuesta sin eventos descubribles para esa consulta.
+
+No se considerará por sí misma un error de transporte ni provocará la creación, modificación o eliminación de EVIDENCE.
+
+Una respuesta vacía no implicará que GDACS no disponga de eventos ni que los EVENTs conocidos hayan dejado de actualizarse.
+
+### 5.5 Fallo durante Refresh
 
 Si un `geteventdata` utilizado para refrescar un EVENT conocido falla:
 
@@ -121,6 +129,26 @@ Si un `geteventdata` utilizado para refrescar un EVENT conocido falla:
 La actualización deberá ser idempotente y cada operación completada correctamente deberá dejar el estado persistido de forma consistente.
 
 Un fallo temporal de la API no se interpretará como desaparición, finalización o invalidación del EVENT.
+
+### 5.6 Limitaciones de Discovery y separación de Refresh
+
+`geteventlist/SEARCH` se utilizará como mecanismo de Discovery, pero no se considerará una fuente exhaustiva para detectar todas las modificaciones posteriores de EVENTs ya conocidos.
+
+Un EVENT conocido podrá recibir modificaciones que no aparezcan en una consulta concreta de Discovery.
+
+Por este motivo:
+
+```text
+Discovery
+→ detectar EVENTs que deben incorporarse o revisarse
+
+Refresh
+→ consultar directamente geteventdata(eventid)
+→ obtener el estado completo del EVENT conocido
+```
+La ausencia de un EVENT en una respuesta de Discovery no deberá interpretarse como desaparición, finalización o invalidación del EVENT.
+
+La implementación no deberá ampliar indefinidamente las ventanas de Discovery con el único objetivo de detectar modificaciones de EVENTs antiguos. El seguimiento de EVENTs conocidos deberá resolverse mediante la política de Refresh.
 
 ## 6. Consulta inicial
 
