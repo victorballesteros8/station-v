@@ -723,3 +723,98 @@ def calculate_global_risk_snapshot(
         coverage_systemic=coverage_systemic,
         coverage_status=coverage_status,
     )
+
+
+def get_countries_for_risk_update(
+    reference_time: datetime | None = None,
+) -> list[int]:
+    """
+    Return country IDs that should be recalculated during the
+    scheduled Country Risk update.
+
+    A country is selected when it has:
+    1. at least one Risk Impact associated with an event inside
+       the 7-day methodological event window; or
+    2. at least one latest subindicator snapshot with score > 0.
+
+    Countries that satisfy neither condition are excluded.
+    """
+
+    if reference_time is None:
+        reference_time = datetime.now(timezone.utc)
+    else:
+        reference_time = _normalise_timestamp(reference_time)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT country_id
+                FROM (
+                    SELECT DISTINCT ri.country_id
+                    FROM risk_impacts ri
+                    JOIN events e
+                        ON e.id = ri.event_id
+                    JOIN event_versions ev
+                        ON ev.id = e.current_version_id
+                    WHERE e.duplicate_of IS NULL
+                      AND ev.time_start IS NOT NULL
+                      AND ev.time_start >= %s - INTERVAL '7 days'
+                      AND ev.time_start <= %s
+
+                    UNION
+
+                    SELECT DISTINCT country_id
+                    FROM (
+                        SELECT DISTINCT ON (country_id, subindicator_id)
+                            country_id,
+                            subindicator_id,
+                            score
+                        FROM risk_subindicator_snapshots
+                        WHERE timestamp <= %s
+                        ORDER BY
+                            country_id,
+                            subindicator_id,
+                            timestamp DESC
+                    ) latest_subindicators
+                    WHERE score > 0
+                ) selected_countries
+                ORDER BY country_id
+                """,
+                (
+                    reference_time,
+                    reference_time,
+                    reference_time,
+                ),
+            )
+
+            return [row[0] for row in cur.fetchall()]
+
+
+def calculate_scheduled_country_risk_updates(
+    reference_time: datetime | None = None,
+) -> list[CountryRiskResult]:
+    """
+    Calculate Country Risk snapshots for all countries selected by
+    the scheduled V1 update policy.
+    """
+
+    if reference_time is None:
+        reference_time = datetime.now(timezone.utc)
+    else:
+        reference_time = _normalise_timestamp(reference_time)
+
+    country_ids = get_countries_for_risk_update(
+        reference_time=reference_time,
+    )
+
+    results: list[CountryRiskResult] = []
+
+    for country_id in country_ids:
+        result = calculate_country_risk_snapshot(
+            country_id,
+            reference_time=reference_time,
+        )
+        results.append(result)
+
+    return results
