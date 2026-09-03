@@ -1,43 +1,43 @@
-# GDACS — Fuente OSINT
+﻿# GDACS â€” Fuente OSINT
 
-## 1. Función en STATION V
+## 1. FunciÃ³n en STATION V
 
-GDACS (Global Disaster Alert and Coordination System) se utilizará como fuente institucional estructurada de detección y contexto sobre desastres de aparición súbita.
+GDACS (Global Disaster Alert and Coordination System) se utilizarÃ¡ como fuente institucional estructurada de detecciÃ³n y contexto sobre desastres de apariciÃ³n sÃºbita.
 
-En STATION V tendrá inicialmente una función de:
+En STATION V tendrÃ¡ inicialmente una funciÃ³n de:
 
-- detección;
+- detecciÃ³n;
 - alerta;
-- contextualización;
-- corroboración secundaria.
+- contextualizaciÃ³n;
+- corroboraciÃ³n secundaria.
 
-GDACS no se considerará automáticamente evidencia primaria del fenómeno físico observado.
+GDACS no se considerarÃ¡ automÃ¡ticamente evidencia primaria del fenÃ³meno fÃ­sico observado.
 
 ## 2. Coste
 
-La utilización de los datos y APIs de GDACS es gratuita.
+La utilizaciÃ³n de los datos y APIs de GDACS es gratuita.
 
-La integración V1 no dependerá de suscripciones de pago, licencias de datos de pago, acceso empresarial ni infraestructura externa de pago.
+La integraciÃ³n V1 no dependerÃ¡ de suscripciones de pago, licencias de datos de pago, acceso empresarial ni infraestructura externa de pago.
 
-El coste previsto para la integración es:
+El coste previsto para la integraciÃ³n es:
 
 ```text
-0 €
+0 â‚¬
 ```
 
-La gratuidad no elimina la obligación de respetar las condiciones de uso y atribución de GDACS.
+La gratuidad no elimina la obligaciÃ³n de respetar las condiciones de uso y atribuciÃ³n de GDACS.
 
-La atribución requerida por GDACS es:
+La atribuciÃ³n requerida por GDACS es:
 
 ```text
 Global Disaster Alert and Coordination System, GDACS
 ```
 
-## 3. Método de acceso
+## 3. MÃ©todo de acceso
 
-La fuente principal será la Web API de GDACS.
+La fuente principal serÃ¡ la Web API de GDACS.
 
-Endpoint de búsqueda:
+Endpoint de bÃºsqueda:
 
 ```text
 https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH
@@ -49,118 +49,139 @@ Endpoint de detalle de evento:
 https://www.gdacs.org/gdacsapi/api/events/geteventdata
 ```
 
-La API permite obtener información de eventos en formato GeoJSON.
+La API permite obtener informaciÃ³n de eventos en formato GeoJSON.
 
-La integración no utilizará scraping de páginas HTML.
+La integraciÃ³n no utilizarÃ¡ scraping de pÃ¡ginas HTML.
 
-Los feeds XML/RSS de GDACS podrán utilizarse posteriormente como mecanismo alternativo o complementario, pero no serán la interfaz principal de V1.
+Los feeds XML/RSS de GDACS podrÃ¡n utilizarse posteriormente como mecanismo alternativo o complementario, pero no serÃ¡n la interfaz principal de V1.
 
-## 4. Primera implementación V1
+## 4. Alcance multi-hazard V1
 
-La primera integración de GDACS se limitará inicialmente a:
+La integraciÃ³n de GDACS en STATION V serÃ¡ multi-hazard.
+
+Los tipos de evento contemplados son:
 
 ```text
-eventtype = EQ
+EQ  â†’ Earthquake
+TC  â†’ Tropical Cyclone
+FL  â†’ Flood
+VO  â†’ Volcano
+DR  â†’ Drought
+WF  â†’ Wildfire
 ```
+La ingestiÃ³n V1 se centrarÃ¡ en eventos que GDACS clasifique con nivel de alerta:
+```
+orange
+red
+```
+Los eventos green no se incorporarÃ¡n al flujo ordinario de eventos GDACS de STATION V.
 
-Es decir, terremotos.
+La selecciÃ³n del nivel GDACS no determina directamente la severidad de STATION V. Cada tipo de desastre deberÃ¡ disponer de reglas de severidad especÃ­ficas que traduzcan las seÃ±ales relevantes de GDACS a la escala comÃºn de severidad de STATION V.
 
-No se implementarán simultáneamente ciclones, inundaciones, incendios u otros tipos de desastre.
-
-Una vez validado el pipeline de terremotos, se podrán incorporar nuevos tipos de evento sin modificar el núcleo conceptual:
-
-```text
+El nÃºcleo conceptual de la integraciÃ³n serÃ¡ comÃºn a todos los hazards:
+```
 SOURCE
 EVIDENCE
 CLAIM
 EVENT
+RISK IMPACT
 ```
+
+
+La incorporaciÃ³n de nuevos hazards no deberÃ¡ requerir modificar el modelo conceptual comÃºn de STATION V.
+
+La primera implementaciÃ³n validada se ha realizado sobre EQ. Los demÃ¡s hazards se incorporarÃ¡n utilizando el mismo pipeline de integraciÃ³n, pero con normalizaciÃ³n y resoluciÃ³n de severidad especÃ­ficas para cada categorÃ­a.
+
+No se utilizarÃ¡ una Ãºnica fÃ³rmula de severidad para todos los hazards.
+
+La severidad de STATION V serÃ¡ independiente del nivel de alerta original de GDACS, aunque este podrÃ¡ constituir una de las seÃ±ales utilizadas por las reglas especÃ­ficas de cada hazard.
+
 
 ## 5. Discovery y Refresh V1
 
-La ingesta GDACS separará dos operaciones independientes: **Discovery** y **Refresh**.
+La ingesta GDACS separarÃ¡ dos operaciones independientes: **Discovery** y **Refresh**.
 
-La frecuencia de consulta de GDACS es independiente de la frecuencia de cálculo de Country Risk.
+La frecuencia de consulta de GDACS es independiente de la frecuencia de cÃ¡lculo de Country Risk.
 
 ### 5.1 Discovery
 
-`geteventlist/SEARCH` se utilizará para descubrir eventos recientes y detectar nuevos `eventid`.
+`geteventlist/SEARCH` se utilizarÃ¡ para descubrir eventos recientes y detectar nuevos `eventid`.
 
-Las consultas de Discovery utilizarán ventanas temporales operativas acotadas. No se dependerá de consultas históricas de gran amplitud como mecanismo ordinario de actualización.
+Las consultas de Discovery utilizarÃ¡n ventanas temporales operativas acotadas. No se dependerÃ¡ de consultas histÃ³ricas de gran amplitud como mecanismo ordinario de actualizaciÃ³n.
 
-Cuando se detecte un `eventid` nuevo, el sistema podrá obtener sus datos completos mediante `geteventdata` antes de persistir la evidencia normalizada.
+Cuando se detecte un `eventid` nuevo, el sistema podrÃ¡ obtener sus datos completos mediante `geteventdata` antes de persistir la evidencia normalizada.
 
 ### 5.2 Refresh
 
-`geteventdata` se utilizará para refrescar EVENTs GDACS ya conocidos y detectar modificaciones o nuevos episodios.
+`geteventdata` se utilizarÃ¡ para refrescar EVENTs GDACS ya conocidos y detectar modificaciones o nuevos episodios.
 
-El refresco no dependerá de `iscurrent`, porque este campo no es suficiente para determinar si un EVENT puede seguir recibiendo modificaciones. Tampoco se utilizará `istemporary` como criterio único de finalización del seguimiento.
+El refresco no dependerÃ¡ de `iscurrent`, porque este campo no es suficiente para determinar si un EVENT puede seguir recibiendo modificaciones. Tampoco se utilizarÃ¡ `istemporary` como criterio Ãºnico de finalizaciÃ³n del seguimiento.
 
-La política concreta de frecuencia y selección de EVENTs a refrescar deberá limitar consultas innecesarias y evitar ventanas históricas de gran tamaño.
+La polÃ­tica concreta de frecuencia y selecciÃ³n de EVENTs a refrescar deberÃ¡ limitar consultas innecesarias y evitar ventanas histÃ³ricas de gran tamaÃ±o.
 
-Un EVENT conocido podrá seguir recibiendo modificaciones aunque su `fromdate` sea anterior a la ventana utilizada para Discovery. Por tanto, la ventana de Discovery no constituye por sí misma una política de actualización de EVENTs conocidos.
+Un EVENT conocido podrÃ¡ seguir recibiendo modificaciones aunque su `fromdate` sea anterior a la ventana utilizada para Discovery. Por tanto, la ventana de Discovery no constituye por sÃ­ misma una polÃ­tica de actualizaciÃ³n de EVENTs conocidos.
 
-La frecuencia de Refresh y la ventana metodológica de Country Risk son conceptos independientes y no deberán mezclarse.
+La frecuencia de Refresh y la ventana metodolÃ³gica de Country Risk son conceptos independientes y no deberÃ¡n mezclarse.
 
 ### 5.3 Comportamiento ante limitaciones de la API
 
-Las consultas de Discovery deberán mantenerse acotadas y la implementación deberá tolerar latencias elevadas, respuestas vacías, errores HTTP, timeouts y respuestas malformadas sin generar duplicados ni dejar datos parcialmente inconsistentes.
+Las consultas de Discovery deberÃ¡n mantenerse acotadas y la implementaciÃ³n deberÃ¡ tolerar latencias elevadas, respuestas vacÃ­as, errores HTTP, timeouts y respuestas malformadas sin generar duplicados ni dejar datos parcialmente inconsistentes.
 
-La estrategia de Refresh deberá ser selectiva y no depender de una única consulta histórica de gran amplitud.
+La estrategia de Refresh deberÃ¡ ser selectiva y no depender de una Ãºnica consulta histÃ³rica de gran amplitud.
 
-### 5.4 Respuesta vacía de Discovery
+### 5.4 Respuesta vacÃ­a de Discovery
 
-Si `geteventlist/SEARCH` devuelve una respuesta JSON vacía (`{}`) tras una petición HTTP satisfactoria, se tratará como una respuesta sin eventos descubribles para esa consulta.
+Si `geteventlist/SEARCH` devuelve una respuesta JSON vacÃ­a (`{}`) tras una peticiÃ³n HTTP satisfactoria, se tratarÃ¡ como una respuesta sin eventos descubribles para esa consulta.
 
-No se considerará por sí misma un error de transporte ni provocará la creación, modificación o eliminación de EVIDENCE.
+No se considerarÃ¡ por sÃ­ misma un error de transporte ni provocarÃ¡ la creaciÃ³n, modificaciÃ³n o eliminaciÃ³n de EVIDENCE.
 
-Una respuesta vacía no implicará que GDACS no disponga de eventos ni que los EVENTs conocidos hayan dejado de actualizarse.
+Una respuesta vacÃ­a no implicarÃ¡ que GDACS no disponga de eventos ni que los EVENTs conocidos hayan dejado de actualizarse.
 
 ### 5.5 Fallo durante Refresh
 
 Si un `geteventdata` utilizado para refrescar un EVENT conocido falla:
 
-- se conservará la EVIDENCE existente;
-- no se sobrescribirán datos válidos con valores incompletos;
-- no se creará una nueva EVIDENCE únicamente por el fallo de consulta;
-- el EVENT seguirá disponible para futuros intentos de Refresh;
-- el fallo de un EVENT no deberá impedir continuar con el procesamiento de los demás EVENTs seleccionados.
+- se conservarÃ¡ la EVIDENCE existente;
+- no se sobrescribirÃ¡n datos vÃ¡lidos con valores incompletos;
+- no se crearÃ¡ una nueva EVIDENCE Ãºnicamente por el fallo de consulta;
+- el EVENT seguirÃ¡ disponible para futuros intentos de Refresh;
+- el fallo de un EVENT no deberÃ¡ impedir continuar con el procesamiento de los demÃ¡s EVENTs seleccionados.
 
-La actualización deberá ser idempotente y cada operación completada correctamente deberá dejar el estado persistido de forma consistente.
+La actualizaciÃ³n deberÃ¡ ser idempotente y cada operaciÃ³n completada correctamente deberÃ¡ dejar el estado persistido de forma consistente.
 
-Un fallo temporal de la API no se interpretará como desaparición, finalización o invalidación del EVENT.
+Un fallo temporal de la API no se interpretarÃ¡ como desapariciÃ³n, finalizaciÃ³n o invalidaciÃ³n del EVENT.
 
-### 5.6 Limitaciones de Discovery y separación de Refresh
+### 5.6 Limitaciones de Discovery y separaciÃ³n de Refresh
 
-`geteventlist/SEARCH` se utilizará como mecanismo de Discovery, pero no se considerará una fuente exhaustiva para detectar todas las modificaciones posteriores de EVENTs ya conocidos.
+`geteventlist/SEARCH` se utilizarÃ¡ como mecanismo de Discovery, pero no se considerarÃ¡ una fuente exhaustiva para detectar todas las modificaciones posteriores de EVENTs ya conocidos.
 
-Un EVENT conocido podrá recibir modificaciones que no aparezcan en una consulta concreta de Discovery.
+Un EVENT conocido podrÃ¡ recibir modificaciones que no aparezcan en una consulta concreta de Discovery.
 
 Por este motivo:
 
 ```text
 Discovery
-→ detectar EVENTs que deben incorporarse o revisarse
+â†’ detectar EVENTs que deben incorporarse o revisarse
 
 Refresh
-→ consultar directamente geteventdata(eventid)
-→ obtener el estado completo del EVENT conocido
+â†’ consultar directamente geteventdata(eventid)
+â†’ obtener el estado completo del EVENT conocido
 ```
-La ausencia de un EVENT en una respuesta de Discovery no deberá interpretarse como desaparición, finalización o invalidación del EVENT.
+La ausencia de un EVENT en una respuesta de Discovery no deberÃ¡ interpretarse como desapariciÃ³n, finalizaciÃ³n o invalidaciÃ³n del EVENT.
 
-La implementación no deberá ampliar indefinidamente las ventanas de Discovery con el único objetivo de detectar modificaciones de EVENTs antiguos. El seguimiento de EVENTs conocidos deberá resolverse mediante la política de Refresh.
+La implementaciÃ³n no deberÃ¡ ampliar indefinidamente las ventanas de Discovery con el Ãºnico objetivo de detectar modificaciones de EVENTs antiguos. El seguimiento de EVENTs conocidos deberÃ¡ resolverse mediante la polÃ­tica de Refresh.
 
 ## 6. Consulta inicial
 
-La integración utilizará consultas de búsqueda sobre un intervalo temporal acotado.
+La integraciÃ³n utilizarÃ¡ consultas de bÃºsqueda sobre un intervalo temporal acotado.
 
-La API de GDACS permite filtrar, entre otros parámetros, por tipo de evento, fecha inicial, fecha final y nivel de alerta.
+La API de GDACS permite filtrar, entre otros parÃ¡metros, por tipo de evento, fecha inicial, fecha final y nivel de alerta.
 
-El sistema deberá evitar consultas excesivamente amplias.
+El sistema deberÃ¡ evitar consultas excesivamente amplias.
 
-La respuesta deberá tratarse como una colección de eventos externos que debe ser normalizada antes de persistirse.
+La respuesta deberÃ¡ tratarse como una colecciÃ³n de eventos externos que debe ser normalizada antes de persistirse.
 
-## 7. Identificación externa
+## 7. IdentificaciÃ³n externa
 
 Los eventos GDACS disponen de identificadores propios y deben distinguirse tres conceptos:
 
@@ -170,61 +191,61 @@ episodeid
 sourceid
 ```
 
-`eventid` identifica el acontecimiento GDACS y se utilizará como identificador externo del EVENT.
+`eventid` identifica el acontecimiento GDACS y se utilizarÃ¡ como identificador externo del EVENT.
 
-`episodeid` identifica una evaluación o episodio concreto de GDACS y se conservará como identificador externo de la EVIDENCE.
+`episodeid` identifica una evaluaciÃ³n o episodio concreto de GDACS y se conservarÃ¡ como identificador externo de la EVIDENCE.
 
-`sourceid` identifica la fuente sísmica original declarada por GDACS, por ejemplo un identificador NEIC/USGS, y se conservará como dato estructurado.
+`sourceid` identifica la fuente sÃ­smica original declarada por GDACS, por ejemplo un identificador NEIC/USGS, y se conservarÃ¡ como dato estructurado.
 
 La regla de identidad V1 es:
 
 ```text
 mismo eventid + mismo episodeid
-→ misma EVIDENCE, actualizable
+â†’ misma EVIDENCE, actualizable
 ```
 
 ```text
 mismo eventid + nuevo episodeid
-→ nueva EVIDENCE, mismo EVENT
+â†’ nueva EVIDENCE, mismo EVENT
 ```
 
-Nunca se creará un EVENT nuevo únicamente porque GDACS genere un nuevo episodio.
+Nunca se crearÃ¡ un EVENT nuevo Ãºnicamente porque GDACS genere un nuevo episodio.
 
-No se utilizarán identificadores generados localmente como sustituto de los identificadores oficiales de GDACS.
+No se utilizarÃ¡n identificadores generados localmente como sustituto de los identificadores oficiales de GDACS.
 
-V1 no realizará asociación heurística entre GDACS y otras fuentes mediante coordenadas, magnitud, hora, título u otros atributos aproximados.
+V1 no realizarÃ¡ asociaciÃ³n heurÃ­stica entre GDACS y otras fuentes mediante coordenadas, magnitud, hora, tÃ­tulo u otros atributos aproximados.
 
-`sourceid` podrá utilizarse para una relación determinista con otra fuente únicamente cuando exista una coincidencia exacta y la evidencia correspondiente esté disponible.
+`sourceid` podrÃ¡ utilizarse para una relaciÃ³n determinista con otra fuente Ãºnicamente cuando exista una coincidencia exacta y la evidencia correspondiente estÃ© disponible.
 
-## 8. Episodios y trazabilidad histórica
+## 8. Episodios y trazabilidad histÃ³rica
 
 Un EVENT GDACS puede contener uno o varios episodios.
 
-Cada episodio representa una evaluación concreta y deberá conservarse independientemente para mantener la trazabilidad histórica.
+Cada episodio representa una evaluaciÃ³n concreta y deberÃ¡ conservarse independientemente para mantener la trazabilidad histÃ³rica.
 
 Por ejemplo, un mismo `eventid` puede disponer de:
 
 ```text
 EVENT 1557236
-│
-├── episode 1724205 → Orange
-│
-└── episode 1724218 → Red
+â”‚
+â”œâ”€â”€ episode 1724205 â†’ Orange
+â”‚
+â””â”€â”€ episode 1724218 â†’ Red
 ```
 
-En este caso siguen existiendo un único EVENT y dos unidades de EVIDENCE asociadas a episodios distintos.
+En este caso siguen existiendo un Ãºnico EVENT y dos unidades de EVIDENCE asociadas a episodios distintos.
 
-`datemodified` representa la fecha de modificación declarada por GDACS para el registro consultado. No se utilizará `datemodified` por sí solo para inferir el orden relativo entre episodios, ya que distintos episodios pueden compartir el mismo valor.
+`datemodified` representa la fecha de modificaciÃ³n declarada por GDACS para el registro consultado. No se utilizarÃ¡ `datemodified` por sÃ­ solo para inferir el orden relativo entre episodios, ya que distintos episodios pueden compartir el mismo valor.
 
-`fromdate` y `todate` representan el intervalo temporal del fenómeno y no deben confundirse con `datemodified`.
+`fromdate` y `todate` representan el intervalo temporal del fenÃ³meno y no deben confundirse con `datemodified`.
 
 ## 9. Datos conservados
 
-La integración conservará en `evidence.structured_data` los datos relevantes proporcionados por GDACS.
+La integraciÃ³n conservarÃ¡ en `evidence.structured_data` los datos relevantes proporcionados por GDACS.
 
 ### 9.1 Datos principales
 
-Como mínimo, cuando estén disponibles:
+Como mÃ­nimo, cuando estÃ©n disponibles:
 
 ```text
 eventid
@@ -250,60 +271,60 @@ sourceid
 affectedcountries
 ```
 
-Los nombres y descripciones de GDACS se conservarán como información de la fuente. La presentación visible en español de STATION V se resolverá en la capa de presentación y no modificará innecesariamente el contenido original de la EVIDENCE.
+Los nombres y descripciones de GDACS se conservarÃ¡n como informaciÃ³n de la fuente. La presentaciÃ³n visible en espaÃ±ol de STATION V se resolverÃ¡ en la capa de presentaciÃ³n y no modificarÃ¡ innecesariamente el contenido original de la EVIDENCE.
 
 ### 9.2 Datos estructurados de contexto
 
-Podrán conservarse en `structured_data`, sin incorporarse automáticamente al modelo matemático de Country Risk:
+PodrÃ¡n conservarse en `structured_data`, sin incorporarse automÃ¡ticamente al modelo matemÃ¡tico de Country Risk:
 
-- información adicional de `severitydata`;
+- informaciÃ³n adicional de `severitydata`;
 - `earthquakedetails`;
 - `rapidpop`;
 - `shakepop`;
 - `additionalinfos`;
 - otros atributos de contexto relevantes proporcionados directamente por GDACS.
 
-La conservación de estos datos no implica que formen parte de la fórmula de Risk V1.
+La conservaciÃ³n de estos datos no implica que formen parte de la fÃ³rmula de Risk V1.
 
 ### 9.3 Recursos secundarios
 
-`images`, `documents`, `shakemap`, `impacts` y URLs de recursos asociados no se convertirán en columnas específicas del modelo común de EVIDENCE.
+`images`, `documents`, `shakemap`, `impacts` y URLs de recursos asociados no se convertirÃ¡n en columnas especÃ­ficas del modelo comÃºn de EVIDENCE.
 
-Cuando sea necesario conservar su referencia, se hará mediante datos estructurados sin convertirlos automáticamente en variables analíticas de V1.
+Cuando sea necesario conservar su referencia, se harÃ¡ mediante datos estructurados sin convertirlos automÃ¡ticamente en variables analÃ­ticas de V1.
 
-La información `episodes` se utilizará para descubrir referencias a episodios cuando resulte necesario, pero no se tratará como una nueva entidad del modelo común distinta de EVIDENCE.
+La informaciÃ³n `episodes` se utilizarÃ¡ para descubrir referencias a episodios cuando resulte necesario, pero no se tratarÃ¡ como una nueva entidad del modelo comÃºn distinta de EVIDENCE.
 
-## 10. Geometría
+## 10. GeometrÃ­a
 
-GDACS proporciona información geoespacial adicional mediante GeoJSON.
+GDACS proporciona informaciÃ³n geoespacial adicional mediante GeoJSON.
 
-La geometría se considerará información contextual de la evidencia.
+La geometrÃ­a se considerarÃ¡ informaciÃ³n contextual de la evidencia.
 
-No se interpretará automáticamente una geometría de impacto como prueba de que toda el área representada haya sufrido daños.
+No se interpretarÃ¡ automÃ¡ticamente una geometrÃ­a de impacto como prueba de que toda el Ã¡rea representada haya sufrido daÃ±os.
 
-La geometría deberá conservar su procedencia y significado original.
+La geometrÃ­a deberÃ¡ conservar su procedencia y significado original.
 
-## 11. Países afectados
+## 11. PaÃ­ses afectados
 
-Cuando esté disponible, `affectedcountries` será la referencia principal de GDACS para construir las relaciones geográficas del EVENT.
+Cuando estÃ© disponible, `affectedcountries` serÃ¡ la referencia principal de GDACS para construir las relaciones geogrÃ¡ficas del EVENT.
 
-El campo `country` se conservará como contexto original proporcionado por GDACS, pero no sustituirá a la lista de países afectados.
+El campo `country` se conservarÃ¡ como contexto original proporcionado por GDACS, pero no sustituirÃ¡ a la lista de paÃ­ses afectados.
 
-La presencia de un país en `affectedcountries` no implica por sí sola una categoría de impacto analítico distinta de la definida por STATION V.
+La presencia de un paÃ­s en `affectedcountries` no implica por sÃ­ sola una categorÃ­a de impacto analÃ­tico distinta de la definida por STATION V.
 
-La clasificación de la relación geográfica y la asignación posterior de Risk Impact deberán seguir el modelo de relaciones de EVENT de STATION V.
+La clasificaciÃ³n de la relaciÃ³n geogrÃ¡fica y la asignaciÃ³n posterior de Risk Impact deberÃ¡n seguir el modelo de relaciones de EVENT de STATION V.
 
-## 12. Severidad y datos sísmicos
+## 12. Severidad y datos sÃ­smicos
 
-La magnitud y profundidad describen el fenómeno físico y se conservarán separadas de la evaluación de alerta de GDACS.
+La magnitud y profundidad describen el fenÃ³meno fÃ­sico y se conservarÃ¡n separadas de la evaluaciÃ³n de alerta de GDACS.
 
-`alertlevel` y `alertscore` representan la evaluación de GDACS del EVENT, mientras que `episodealertlevel` y `episodealertscore` representan la evaluación del episodio concreto.
+`alertlevel` y `alertscore` representan la evaluaciÃ³n de GDACS del EVENT, mientras que `episodealertlevel` y `episodealertscore` representan la evaluaciÃ³n del episodio concreto.
 
-GDACS puede proporcionar la magnitud mediante `severitydata.severity` y también mediante `earthquakedetails.magnitude`. Cuando ambos estén disponibles, se conservarán sus valores de fuente y se utilizará la normalización definida por STATION V sin tratar ambos campos como dos señales independientes del mismo fenómeno.
+GDACS puede proporcionar la magnitud mediante `severitydata.severity` y tambiÃ©n mediante `earthquakedetails.magnitude`. Cuando ambos estÃ©n disponibles, se conservarÃ¡n sus valores de fuente y se utilizarÃ¡ la normalizaciÃ³n definida por STATION V sin tratar ambos campos como dos seÃ±ales independientes del mismo fenÃ³meno.
 
-Los datos de GDACS no se convertirán automáticamente en nuevas variables matemáticas de Country Risk fuera de las reglas de severidad y Risk Impact ya definidas por STATION V.
+Los datos de GDACS no se convertirÃ¡n automÃ¡ticamente en nuevas variables matemÃ¡ticas de Country Risk fuera de las reglas de severidad y Risk Impact ya definidas por STATION V.
 
-## 13. Nivel de alerta y resolución de severidad V1.2
+## 13. Nivel de alerta y resoluciÃ³n de severidad
 
 GDACS utiliza niveles de alerta, incluyendo:
 
@@ -313,82 +334,157 @@ orange
 red
 ```
 
-STATION V conservará el nivel original de GDACS.
+STATION V conservarÃ¡ siempre el nivel original de GDACS como atributo de la EVIDENCE.
 
-Para terremotos, el nivel de alerta se utilizará junto con la magnitud para resolver la `severity` del EVENT.
+El nivel de alerta GDACS no se transformarÃ¡ mediante una equivalencia genÃ©rica en una severidad de STATION V.
 
-La referencia mínima por nivel de alerta será:
+La resoluciÃ³n de severidad deberÃ¡ ser especÃ­fica para cada tipo de desastre:
+```
+EQ â†’ reglas sÃ­smicas
+TC â†’ reglas de ciclones tropicales
+FL â†’ reglas de inundaciones
+VO â†’ reglas volcÃ¡nicas
+DR â†’ reglas de sequÃ­a
+WF â†’ reglas de incendios forestales
+```
+Cada funciÃ³n especÃ­fica deberÃ¡ utilizar las seÃ±ales objetivas disponibles y relevantes para ese hazard.
 
-| Nivel GDACS | Severidad mínima |
-|---|---|
-| `green` | `info` |
-| `orange` | `medium` |
-| `red` | `high` |
+El resultado deberÃ¡ expresarse en la escala comÃºn de STATION V:
+```
+info
+low
+medium
+high
+critical
+```
 
-También se aplican las referencias de magnitud:
+La severidad resultante serÃ¡ la mayor respaldada por las seÃ±ales objetivas definidas para ese hazard. No se sumarÃ¡n puntos entre seÃ±ales ni se utilizarÃ¡ una media entre criterios salvo que una metodologÃ­a especÃ­fica posterior lo establezca expresamente.
 
-| Magnitud | Severidad mínima |
-|---|---|
-| M < 5,0 | `info` |
-| M 5,0–5,9 | `low` |
-| M 6,0–6,9 | `medium` |
-| M 7,0–7,9 | `high` |
-| M ≥ 8,0 | `critical` |
+### 13.1Terremotos
 
-La severidad resultante será la mayor respaldada por las señales objetivas disponibles. No se sumarán puntos entre señales ni se utilizará una media entre criterios.
+Para EQ, la metodologÃ­a actualmente definida utiliza el nivel de alerta GDACS junto con las caracterÃ­sticas sÃ­smicas y las seÃ±ales adicionales objetivas disponibles.
 
-En V1.2, las señales específicas adicionales de impacto se interpretarán de la siguiente manera cuando estén disponibles y tengan significado aplicable al registro:
+La referencia mÃ­nima por nivel de alerta serÃ¡:
 
-- `MMI < VII`: no eleva;
-- `MMI VII`: eleva un nivel;
-- `MMI VIII`: eleva dos niveles;
-- `MMI IX o superior`: eleva dos niveles;
-- indicador explícito de tsunami: eleva un nivel;
-- otros campos objetivos solo podrán elevar si se define expresamente una regla antes de su implementación.
+Nivel GDACS	Severidad mÃ­nima
+green	info
+orange	medium
+red	high
 
-Las elevaciones nunca podrán reducir la referencia mínima ya establecida por magnitud o por alerta GDACS.
+TambiÃ©n se aplican las referencias de magnitud:
 
-Las severidades USGS y GDACS no se promediarán. Cada fuente evalúa su propia evidencia. Una fuente independiente puede aportar evidencia para actualizar la severidad del mismo EVENT mediante una nueva versión, conservando la trazabilidad de la evaluación anterior.
+Magnitud	Severidad mÃ­nima
+M < 5,0	info
+M 5,0â€“5,9	low
+M 6,0â€“6,9	medium
+M 7,0â€“7,9	high
+M â‰¥ 8,0	critical
 
-Esta regla es específica de la ingestión sísmica GDACS y no constituye una regla genérica para todas las categorías de desastre.
+En V1.2, las seÃ±ales especÃ­ficas adicionales de impacto se interpretarÃ¡n de la siguiente manera cuando estÃ©n disponibles y tengan significado aplicable al registro:
+
+MMI < VII: no eleva;
+MMI VII: eleva un nivel;
+MMI VIII: eleva dos niveles;
+MMI IX o superior: eleva dos niveles;
+indicador explÃ­cito de tsunami: eleva un nivel;
+otros campos objetivos solo podrÃ¡n elevar si se define expresamente una regla antes de su implementaciÃ³n.
+
+Las elevaciones nunca podrÃ¡n reducir la referencia mÃ­nima ya establecida por magnitud o por alerta GDACS.
+
+Las severidades USGS y GDACS no se promediarÃ¡n. Cada fuente evalÃºa su propia evidencia. Una fuente independiente puede aportar evidencia para actualizar la severidad del mismo EVENT mediante una nueva versiÃ³n, conservando la trazabilidad de la evaluaciÃ³n anterior.
+
+Esta metodologÃ­a es especÃ­fica de EQ y no constituye una regla genÃ©rica para las demÃ¡s categorÃ­as de desastre.
+
+### 13.2 Otros hazards
+
+Para TC, FL, VO, DR y WF se definirÃ¡n reglas especÃ­ficas de severidad antes de su incorporaciÃ³n efectiva al pipeline.
+
+Estas reglas deberÃ¡n:
+
+conservar el nivel original de alerta GDACS;
+identificar las variables objetivas relevantes del hazard;
+evitar tratar como equivalentes magnitudes o indicadores fÃ­sicamente distintos;
+producir una severidad comÃºn de STATION V;
+mantener separada la evaluaciÃ³n de GDACS de la severidad interna de STATION V;
+permitir que una alerta orange resulte en low, medium u otra severidad superior cuando las seÃ±ales objetivas lo respalden;
+permitir que una alerta red alcance high o critical segÃºn las caracterÃ­sticas objetivas del evento.
+
+No se establecerÃ¡ una tabla genÃ©rica del tipo:
+
+```
+GDACS orange â†’ STATION V medium
+GDACS red    â†’ STATION V high
+```
+para todos los hazards.
+
+Las reglas especÃ­ficas de cada hazard deberÃ¡n documentarse antes de implementar su funciÃ³n de severidad correspondiente.
+
+### 13.3 Visibilidad cartogrÃ¡fica
+
+La visibilidad de un evento en el mapa dependerÃ¡ exclusivamente de la severidad de STATION V.
+
+```
+info
+low
+medium
+    â†“
+no se muestra como EVENT en el mapa
+
+high
+critical
+    â†“
+EVENT visible en el mapa
+```
+El nivel de alerta original de GDACS no determina directamente la visibilidad cartogrÃ¡fica.
+
+Por tanto:
+```
+GDACS orange
+â†’ puede producir info / low / medium / high / critical
+
+GDACS red
+â†’ puede producir high / critical
+```
+La decisiÃ³n de mostrar el EVENT se realizarÃ¡ despuÃ©s de resolver la severidad propia de STATION V.
+
 
 ## 14. EVIDENCE
 
-Cada registro GDACS aceptado por el ingestor constituirá una unidad de:
+Cada registro GDACS aceptado por el ingestor constituirÃ¡ una unidad de:
 
 ```text
 EVIDENCE
 ```
 
-La evidencia representará que GDACS ha registrado o proporcionado información sobre este evento.
+La evidencia representarÃ¡ que GDACS ha registrado o proporcionado informaciÃ³n sobre este evento.
 
-El `source_id` deberá apuntar al registro `GDACS` de la tabla `sources`.
+El `source_id` deberÃ¡ apuntar al registro `GDACS` de la tabla `sources`.
 
-La persistencia deberá ser idempotente respecto de `source_id + external_id + external_episode_id`.
+La persistencia deberÃ¡ ser idempotente respecto de `source_id + external_id + external_episode_id`.
 
 ## 15. CLAIM
 
-La primera implementación generará un CLAIM asociado a cada EVIDENCE GDACS.
+La primera implementaciÃ³n generarÃ¡ un CLAIM asociado a cada EVIDENCE GDACS.
 
-El CLAIM describirá de forma controlada el hecho que la fuente permite afirmar.
+El CLAIM describirÃ¡ de forma controlada el hecho que la fuente permite afirmar.
 
-El nivel de confianza y el `assertion_status` deberán reflejar la naturaleza de la fuente.
+El nivel de confianza y el `assertion_status` deberÃ¡n reflejar la naturaleza de la fuente.
 
-No se utilizará el CLAIM para convertir automáticamente una alerta GDACS en un acontecimiento STATION V confirmado.
+No se utilizarÃ¡ el CLAIM para convertir automÃ¡ticamente una alerta GDACS en un acontecimiento STATION V confirmado.
 
 ## 16. EVENT
 
-La existencia de EVIDENCE + CLAIM de GDACS no implica automáticamente un EVENT.
+La existencia de EVIDENCE + CLAIM de GDACS no implica automÃ¡ticamente un EVENT.
 
-La creación o actualización de un EVENT requerirá posteriormente reglas específicas de clasificación, corroboración y evaluación.
+La creaciÃ³n o actualizaciÃ³n de un EVENT requerirÃ¡ posteriormente reglas especÃ­ficas de clasificaciÃ³n, corroboraciÃ³n y evaluaciÃ³n.
 
 En particular:
 
 ```text
 SOURCE
-  ↓
+  â†“
 EVIDENCE
-  ↓
+  â†“
 CLAIM
 ```
 
@@ -396,41 +492,41 @@ es un proceso distinto de:
 
 ```text
 CLAIM
-  ↓
+  â†“
 EVENT
 ```
 
-Cuando un EVENT ya existente reciba nueva evidencia independiente de GDACS que sustente una severidad superior, la actualización deberá realizarse mediante el mecanismo de versionado del EVENT y no creando un segundo EVENT para el mismo acontecimiento.
+Cuando un EVENT ya existente reciba nueva evidencia independiente de GDACS que sustente una severidad superior, la actualizaciÃ³n deberÃ¡ realizarse mediante el mecanismo de versionado del EVENT y no creando un segundo EVENT para el mismo acontecimiento.
 
-## 17. Relación con USGS
+## 17. RelaciÃ³n con USGS
 
 USGS y GDACS pueden describir un mismo terremoto desde perspectivas diferentes.
 
 ```text
 USGS
-→ observación sísmica
-→ magnitud
-→ profundidad
-→ coordenadas
+â†’ observaciÃ³n sÃ­smica
+â†’ magnitud
+â†’ profundidad
+â†’ coordenadas
 
 GDACS
-→ alerta de desastre
-→ evaluación de impacto potencial
-→ nivel de alerta
-→ contexto geoespacial
+â†’ alerta de desastre
+â†’ evaluaciÃ³n de impacto potencial
+â†’ nivel de alerta
+â†’ contexto geoespacial
 ```
 
-Cuando exista correspondencia entre ambos registros, la arquitectura deberá permitir posteriormente relacionar las evidencias sin fusionarlas incorrectamente.
+Cuando exista correspondencia entre ambos registros, la arquitectura deberÃ¡ permitir posteriormente relacionar las evidencias sin fusionarlas incorrectamente.
 
-La coincidencia entre un registro USGS y uno GDACS no se establecerá únicamente por el título del evento ni mediante matching aproximado.
+La coincidencia entre un registro USGS y uno GDACS no se establecerÃ¡ Ãºnicamente por el tÃ­tulo del evento ni mediante matching aproximado.
 
-En V1 no se establecerá una relación GDACS ↔ USGS cuando no exista una coincidencia determinista disponible.
+En V1 no se establecerÃ¡ una relaciÃ³n GDACS â†” USGS cuando no exista una coincidencia determinista disponible.
 
-## 18. Deduplicación y actualización
+## 18. DeduplicaciÃ³n y actualizaciÃ³n
 
-La deduplicación se realizará mediante los identificadores externos de GDACS.
+La deduplicaciÃ³n se realizarÃ¡ mediante los identificadores externos de GDACS.
 
-El sistema deberá ser idempotente:
+El sistema deberÃ¡ ser idempotente:
 
 ```text
 misma EVIDENCE GDACS
@@ -438,7 +534,7 @@ misma EVIDENCE GDACS
 mismo eventid
 +
 mismo episodeid
-        ↓
+        â†“
 no crear una segunda EVIDENCE
 ```
 
@@ -448,62 +544,62 @@ Cuando GDACS proporcione un nuevo episodio:
 mismo eventid
 +
 nuevo episodeid
-        ↓
+        â†“
 nueva EVIDENCE
 +
 same EVENT
 ```
 
-La actualización de información de un episodio ya conocido deberá actualizar la evidencia correspondiente en lugar de generar duplicados.
+La actualizaciÃ³n de informaciÃ³n de un episodio ya conocido deberÃ¡ actualizar la evidencia correspondiente en lugar de generar duplicados.
 
-Los episodios anteriores no deberán eliminarse por el hecho de que GDACS proporcione otro episodio para el mismo EVENT.
+Los episodios anteriores no deberÃ¡n eliminarse por el hecho de que GDACS proporcione otro episodio para el mismo EVENT.
 
 ## 19. Trazabilidad
 
-Cada EVIDENCE GDACS deberá conservar, cuando esté disponible:
+Cada EVIDENCE GDACS deberÃ¡ conservar, cuando estÃ© disponible:
 
 - URL original;
 - identificador externo;
 - `episodeid`;
 - `sourceid`;
 - tipo de evento;
-- timestamp del fenómeno;
-- timestamp de recuperación;
+- timestamp del fenÃ³meno;
+- timestamp de recuperaciÃ³n;
 - `datemodified`;
 - datos estructurados relevantes;
 - fuente original.
 
-La trazabilidad deberá permitir reconstruir de qué registro GDACS procede cada EVIDENCE y qué evaluación concreta representa.
+La trazabilidad deberÃ¡ permitir reconstruir de quÃ© registro GDACS procede cada EVIDENCE y quÃ© evaluaciÃ³n concreta representa.
 
-## 20. Límites y comportamiento
+## 20. LÃ­mites y comportamiento
 
-La API de búsqueda de GDACS permite consultas personalizadas y devuelve datos geoespaciales.
+La API de bÃºsqueda de GDACS permite consultas personalizadas y devuelve datos geoespaciales.
 
-Las consultas deberán realizarse con intervalos temporales controlados y respetando los límites técnicos de la API.
+Las consultas deberÃ¡n realizarse con intervalos temporales controlados y respetando los lÃ­mites tÃ©cnicos de la API.
 
-La implementación deberá tolerar:
+La implementaciÃ³n deberÃ¡ tolerar:
 
-- respuesta vacía;
+- respuesta vacÃ­a;
 - campos opcionales ausentes;
 - cambios de estado de alerta;
 - nuevos episodios;
-- actualización de registros existentes;
+- actualizaciÃ³n de registros existentes;
 - errores HTTP;
 - respuestas malformadas;
 - timeouts;
 - interrupciones temporales del servicio.
 
-Los errores de la fuente no deberán provocar corrupción parcial de la base de datos.
+Los errores de la fuente no deberÃ¡n provocar corrupciÃ³n parcial de la base de datos.
 
-## 21. Política de interpretación
+## 21. PolÃ­tica de interpretaciÃ³n
 
-GDACS es una fuente institucional de alerta y coordinación.
+GDACS es una fuente institucional de alerta y coordinaciÃ³n.
 
 Por tanto:
 
 ```text
 GDACS alerta
-≠
+â‰ 
 evento confirmado por STATION V
 ```
 
@@ -511,46 +607,62 @@ y:
 
 ```text
 GDACS orange/red
-≠
+â‰ 
 Country Risk orange/red
 ```
 
-Los niveles propios de GDACS se conservarán como atributos de la fuente.
+Los niveles propios de GDACS se conservarÃ¡n como atributos de la fuente.
 
-La transformación posterior a indicadores internos de STATION V será una capa separada.
+La transformaciÃ³n posterior a indicadores internos de STATION V serÃ¡ una capa separada.
+
 
 ## 22. Alcance inicial
 
-La primera implementación deberá demostrar:
+La integraciÃ³n GDACS deberÃ¡ demostrar:
 
-1. conexión con la API;
+1. conexiÃ³n con la API;
 2. Discovery mediante `geteventlist/SEARCH`;
 3. Refresh mediante `geteventdata`;
-4. normalización;
-5. identificación externa;
+4. normalizaciÃ³n multi-hazard;
+5. identificaciÃ³n externa;
 6. persistencia de SOURCE;
 7. persistencia de EVIDENCE;
 8. persistencia de CLAIM;
-9. deduplicación;
-10. actualización de registros existentes;
-11. creación de nueva EVIDENCE para nuevos episodios;
-12. resolución de nuevos episodios sobre el mismo EVENT;
-13. persistencia de países afectados;
-14. asignación correcta de Risk Impacts;
+9. deduplicaciÃ³n;
+10. actualizaciÃ³n de registros existentes;
+11. creaciÃ³n de nueva EVIDENCE para nuevos episodios;
+12. resoluciÃ³n de nuevos episodios sobre el mismo EVENT;
+13. persistencia de paÃ­ses afectados;
+14. asignaciÃ³n correcta de Risk Impacts;
 15. trazabilidad;
-16. comportamiento correcto ante respuestas vacías, errores y timeouts.
+16. comportamiento correcto ante respuestas vacÃ­as, errores y timeouts;
+17. resoluciÃ³n de severidad especÃ­fica por hazard;
+18. separaciÃ³n entre severidad de STATION V y nivel de alerta original de GDACS;
+19. visibilidad cartogrÃ¡fica limitada a EVENTs con severidad `high` o `critical`.
 
-No se implementará todavía:
+Los hazards contemplados por la integraciÃ³n son:
 
-- correlación automática USGS ↔ GDACS mediante matching heurístico;
-- incorporación de ciclones;
-- incorporación de inundaciones;
-- scoring de riesgo basado directamente en GDACS fuera de las reglas ya definidas;
-- interpretación automática de zonas afectadas más allá de las relaciones definidas por STATION V.
+```text
+EQ
+TC
+FL
+VO
+DR
+WF
+```
+La metodologÃ­a de severidad de EQ estÃ¡ definida y validada inicialmente.
+
+Las metodologÃ­as especÃ­ficas de TC, FL, VO, DR y WF deberÃ¡n definirse antes de activar su procesamiento efectivo.
+
+No se implementarÃ¡:
+
+- correlaciÃ³n automÃ¡tica USGS â†” GDACS mediante matching heurÃ­stico;
+- una fÃ³rmula de severidad comÃºn aplicada indistintamente a todos los hazards;
+- equivalencia automÃ¡tica entre el nivel GDACS y la severidad de STATION V.
 
 ## 23. Fuentes oficiales
 
-Documentación API:
+DocumentaciÃ³n API:
 
 https://www.gdacs.org/Documents/2025/GDACS_API_quickstart_v1.pdf
 
@@ -569,3 +681,4 @@ https://www.gdacs.org/resources.aspx
 Condiciones de uso:
 
 https://www.gdacs.org/documents/2025/GDACS_Terms_of_use_Mar_25.pdf
+
