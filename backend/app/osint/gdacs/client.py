@@ -12,13 +12,71 @@ GDACS_API_URL = (
     "https://www.gdacs.org/"
     "gdacsapi/api/events/geteventlist/SEARCH"
 )
+GDACS_EVENT_DATA_URL = (
+    "https://www.gdacs.org/"
+    "gdacsapi/api/events/geteventdata"
+)
 
 DEFAULT_TIMEOUT_SECONDS = 30
+DEFAULT_DETAIL_TIMEOUT_SECONDS = 60
 DEFAULT_PAGE_SIZE = 100
 
 
 class GDACSClientError(RuntimeError):
     """Error al consultar la API de GDACS."""
+
+
+def _fetch_json(
+    *,
+    url: str,
+    timeout: int,
+) -> dict[str, Any]:
+    request = Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "STATION-V/1.0",
+        },
+    )
+
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            if response.status == 204:
+                return {}
+
+            raw_payload = response.read()
+
+    except HTTPError as exc:
+        raise GDACSClientError(
+            f"GDACS API returned HTTP {exc.code}"
+        ) from exc
+
+    except URLError as exc:
+        raise GDACSClientError(
+            f"GDACS API request failed: {exc.reason}"
+        ) from exc
+
+    except TimeoutError as exc:
+        raise GDACSClientError(
+            "GDACS API request timed out"
+        ) from exc
+
+    try:
+        payload = json.loads(raw_payload.decode("utf-8"))
+    except (
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+    ) as exc:
+        raise GDACSClientError(
+            "GDACS API returned invalid JSON"
+        ) from exc
+
+    if not isinstance(payload, dict):
+        raise GDACSClientError(
+            "GDACS API response must be a JSON object"
+        )
+
+    return payload
 
 
 def _fetch_gdacs_page(
@@ -39,63 +97,38 @@ def _fetch_gdacs_page(
     }
 
     if alert_levels:
-        params["alertlevel"] = ";".join(
-            alert_levels
-        )
+        params["alertlevel"] = ";".join(alert_levels)
 
     url = f"{GDACS_API_URL}?{urlencode(params)}"
-
-    request = Request(
-        url,
-        headers={
-            "Accept": "application/json",
-            "User-Agent": "STATION-V/1.0",
-        },
+    return _fetch_json(
+        url=url,
+        timeout=DEFAULT_TIMEOUT_SECONDS,
     )
 
-    try:
-        with urlopen(
-            request,
-            timeout=DEFAULT_TIMEOUT_SECONDS,
-        ) as response:
-            if response.status == 204:
-                return {
-                    "type": "FeatureCollection",
-                    "features": [],
-                }
 
-            raw_payload = response.read()
+def fetch_gdacs_event(
+    *,
+    event_id: str,
+    event_type: str = "EQ",
+) -> dict[str, Any]:
+    """Fetch one complete GDACS event by its stable event identifier."""
+    if not event_id:
+        raise ValueError("event_id is required")
 
-    except HTTPError as exc:
+    params = {
+        "eventtype": event_type,
+        "eventid": event_id,
+    }
+    url = f"{GDACS_EVENT_DATA_URL}?{urlencode(params)}"
+
+    payload = _fetch_json(
+        url=url,
+        timeout=DEFAULT_DETAIL_TIMEOUT_SECONDS,
+    )
+
+    if "properties" not in payload:
         raise GDACSClientError(
-            f"GDACS API returned HTTP {exc.code}"
-        ) from exc
-
-    except URLError as exc:
-        raise GDACSClientError(
-            f"GDACS API request failed: {exc.reason}"
-        ) from exc
-
-    except TimeoutError as exc:
-        raise GDACSClientError(
-            "GDACS API request timed out"
-        ) from exc
-
-    try:
-        payload = json.loads(
-            raw_payload.decode("utf-8")
-        )
-    except (
-        UnicodeDecodeError,
-        json.JSONDecodeError,
-    ) as exc:
-        raise GDACSClientError(
-            "GDACS API returned invalid JSON"
-        ) from exc
-
-    if not isinstance(payload, dict):
-        raise GDACSClientError(
-            "GDACS API response must be a JSON object"
+            "GDACS event detail response has no properties object"
         )
 
     return payload
