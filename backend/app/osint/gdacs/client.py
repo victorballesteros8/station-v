@@ -100,10 +100,20 @@ def _fetch_gdacs_page(
         params["alertlevel"] = ";".join(alert_levels)
 
     url = f"{GDACS_API_URL}?{urlencode(params)}"
-    return _fetch_json(
+
+    payload = _fetch_json(
         url=url,
         timeout=DEFAULT_TIMEOUT_SECONDS,
     )
+
+    if payload == {}:
+        return {
+            "type": "FeatureCollection",
+            "features": [],
+            "bbox": None,
+        }
+
+    return payload
 
 
 def fetch_gdacs_event(
