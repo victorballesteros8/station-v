@@ -811,10 +811,18 @@ def calculate_scheduled_country_risk_updates(
     results: list[CountryRiskResult] = []
 
     for country_id in country_ids:
-        result = calculate_country_risk_snapshot(
-            country_id,
-            reference_time=reference_time,
-        )
+        try:
+            result = calculate_country_risk_snapshot(
+                country_id,
+                reference_time=reference_time,
+            )
+        except Exception as exc:
+            print(
+                f"Country Risk update failed for country_id={country_id}: "
+                f"{exc}"
+            )
+            continue
+
         results.append(result)
 
     return results
