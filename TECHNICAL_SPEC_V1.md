@@ -944,6 +944,31 @@ Country Risk podrá recalcularse cuando:
 
 Cada cálculo generará un snapshot histórico.
 
+### 19.3 Política operativa de actualización V1
+
+La actualización de STATION V se organizará mediante dos ciclos independientes:
+
+1. **Ingesta de fuentes OSINT.** Cada fuente se consultará según su propia frecuencia, disponibilidad y naturaleza operativa. La frecuencia de ingesta no será necesariamente la misma para todas las fuentes.
+
+2. **Recalculación de Country Risk.** El Country Risk podrá recalcularse inmediatamente cuando exista un cambio relevante en Evidence, EVENT o Risk Impact que afecte a un país.
+
+Además de estas actualizaciones motivadas por cambios, V1 ejecutará una **actualización programada cada 6 horas** para permitir que evolucionen los factores temporales del modelo aunque no se haya recibido nueva información.
+
+La actualización programada no implicará recalcular necesariamente los 196 países en cada ciclo. Se priorizarán:
+
+- países con Risk Impacts activos o relevantes;
+- países cuyo estado de riesgo histórico deba mantenerse para permitir la evolución temporal del modelo.
+
+Los países sin impactos ni estado de riesgo que requiera continuidad no deberán recalcularse únicamente por el hecho de pertenecer al catálogo analítico.
+
+Cada ejecución del motor que produzca un cálculo de Country Risk generará su correspondiente snapshot histórico.
+
+La frecuencia de ingesta de una fuente y la frecuencia de recalculación de Country Risk son conceptos independientes. La llegada de nueva información no obliga a esperar al siguiente ciclo programado cuando el cambio sea relevante para el riesgo de un país.
+
+La actualización programada tampoco implica que la ausencia de nuevos datos equivalga a Country Risk cero. La ausencia de nueva Evidence y la ausencia de riesgo son estados conceptualmente distintos.
+
+La persistencia de consecuencias derivadas de acontecimientos graves más allá de la ventana temporal definida por la metodología V1 queda fuera de esta política y podrá revisarse como evolución metodológica posterior.
+
 ## 20. Dimensiones
 
 ### 20.1 Internal Instability
